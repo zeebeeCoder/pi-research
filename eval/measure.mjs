@@ -27,7 +27,12 @@ async function session(dir) {
   const toolCalls=assistants.flatMap(m=>(m.content??[]).filter(c=>c.type==='toolCall'));
   const nestedCalls=messages.flatMap(m=>Array.isArray(m.nestedCalls)?m.nestedCalls:[]);
   const first=Date.parse(entries[0].timestamp),last=Date.parse(entries.at(-1).timestamp);
+  const reportCall=toolCalls.find(c=>c.name==='write' && String(c.arguments?.path??'').endsWith('/report.md'));
+  const reportEvent=reportCall && entries.find(e=>e.message?.role==='toolResult' && e.message.toolCallId===reportCall.id && !e.message.isError);
+  const reportTime=reportEvent?Date.parse(reportEvent.timestamp):null;
+  const reportUsage=reportTime===null?null:usageTotals(entries.filter(e=>e.message?.role==='assistant' && Date.parse(e.timestamp)<=reportTime).flatMap(e=>e.message.usage?[e.message.usage]:[]));
   return {provider:meta.provider,model:meta.model,thinking:meta.thinking,startMs:first,endMs:last,elapsedMs:last-first,
+    reportReadyMs:reportTime===null?null:reportTime-first,reportUsage,
     assistantMessages:assistants.length,toolCalls:toolCalls.map(c=>({name:c.name,arguments:c.arguments})),nestedCalls,
     usage:usageTotals(assistants.flatMap(m=>m.usage?[m.usage]:[]))};
 }
@@ -89,11 +94,13 @@ const metrics={
   pipelineStageEstimatesMs:{
     baseline:collector.elapsedMs+arms.copper.elapsedMs,
     screened:collector.elapsedMs+classifier.wallTimeMs+arms.silver.elapsedMs,
-    note:'Measured stage sums; exclude parent orchestration/reference review/selection setup. Arms run concurrently and may contend for resources.'
+    baselineReportReady:collector.elapsedMs+arms.copper.reportReadyMs,
+    screenedReportReady:collector.elapsedMs+classifier.wallTimeMs+arms.silver.reportReadyMs,
+    note:'Measured stage sums; complete-arm duration includes the evaluation claim register. Report-ready excludes later claim-register generation, but is not human acceptance time. Exclude parent orchestration/reference review/selection setup. Arms run concurrently and may contend for resources.'
   },
   overallInterpretation:'Exploratory pair; no pruning, no input-size reduction. Differences can be ordering, generation variance, cache behavior or contention, not a proven classifier benefit.'
 };
 await writeFile(join(root,'metrics.json'),JSON.stringify(metrics,null,2)+'\n',{mode:0o600});
 console.log(JSON.stringify({retrieval:metrics.retrieval,classifier:metrics.classifier,selection:{selected:selection.selected,omitted:selection.omitted,baselineBytes:selection.baselineBytes,reducedBytes:selection.reducedBytes},
   collector:{elapsedMs:collector.elapsedMs,usage:collector.usage},
-  arms:Object.fromEntries(Object.entries(arms).map(([name,a])=>[name,{elapsedMs:a.elapsedMs,usage:a.usage,reportWordCount:a.reportWordCount,factualClaims:a.factualClaims,quotes:a.quotes,quoteMatches:a.quoteMatches,mechanicalErrors:a.mechanicalErrors,reopenedSourceIds:a.reopenedSourceIds}])),pipelineStageEstimatesMs:metrics.pipelineStageEstimatesMs},null,2));
+  arms:Object.fromEntries(Object.entries(arms).map(([name,a])=>[name,{elapsedMs:a.elapsedMs,reportReadyMs:a.reportReadyMs,reportUsage:a.reportUsage,usage:a.usage,reportWordCount:a.reportWordCount,factualClaims:a.factualClaims,quotes:a.quotes,quoteMatches:a.quoteMatches,mechanicalErrors:a.mechanicalErrors,reopenedSourceIds:a.reopenedSourceIds}])),pipelineStageEstimatesMs:metrics.pipelineStageEstimatesMs},null,2));
