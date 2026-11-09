@@ -141,6 +141,12 @@ Reports, timings, usage and claim checks are preserved locally. No new searches
 are needed to inspect them; `node eval/measure.mjs` recomputes metrics from the
 captured evidence. All evaluation allowances are spent; AGY stays parked.
 
+A subsequent [rank-only v2 pilot](docs/rank-only-v2-results.md) used a finer
+ordinal score on the same ten sources. It took0.667s and put all three predefined
+reference anchors in the top three (original order needed ten positions; coarse
+v1 needed seven). All material remains available. This is a promising in-sample
+reading-order result, not proven synthesis improvement or a new automatic tool.
+
 ## Boundaries
 
 - No automatic fan-out, retries, provider fallback, or model escalation.
