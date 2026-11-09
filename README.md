@@ -1,18 +1,104 @@
 # pi-research
 
-Local live-provider spike for Pi. Wraps the existing machine-local Brave,
-Perplexity search, Grok X and AGY scout scripts; it does not replace their clients
-or credential handling. No mocks, classifier models, or deep research.
+A local live-provider spike for Pi. One tool, `research_search`, wraps the existing
+Brave, Perplexity search, Grok X and AGY scout scripts. No new provider clients,
+offline fixtures, classifier models, evidence database, or deep research.
 
-Implementation is in progress. The first contact will be a research subagent
-using real searches and preserving its report and provider artifacts locally.
+## Load locally
+
+```sh
+# Explicit, single-process loading; no global install
+pi -e ./extensions/research.ts --tools +codemode
+
+# Or launch Pi in this trusted project: .pi/settings.json loads the package
+pi --approve
+```
+
+The package has no runtime npm dependencies. Pi provides its extension API/types.
+Prerequisites: Bun, Node, and the four existing skills under
+`~/.pi/agent/skills/{brave-search,perplexity-search,grok-x,agy-search}`. Their
+existing credentials/authentication stay in place. This is a machine-local spike,
+not a standalone portable distribution.
+
+## Call it
+
+```js
+const result = await tools.research_search({
+  provider: "brave", // brave | perplexity | grok | agy
+  query: "Nvidia recent market developments",
+  limit: 5,         // 1–5; default 5
+  since: "2026-11-02",
+  until: "2026-11-10"
+});
+text({ status: result.status, sources: result.sources, artifacts: result.artifactDir });
+```
+
+Use actual dates for each assignment. The example is the first spike's date window.
+Each call selects ONE provider and performs ONE CLI invocation, without retries.
+Call multiple providers only when explicitly budgeted. Independent calls can use
+`Promise.allSettled()`; a failed result retains its structured envelope, so also
+check `status`, not just whether the promise fulfilled.
+
+### Semantics and artifacts
+
+- `completed`: usable discovery leads; **not verified facts**.
+- `empty`: recognized successful response with no leads.
+- `failed`: CLI, deadline, JSON, shape, or budget failure. `partialOutput` says
+  unusable stdout was retained; partial output is never promoted to success.
+- Brave/Perplexity sources are `search-result`; Grok/AGY sources are
+  `model-extracted-lead`. All have `verified: false`.
+- Each source has an ID and `rawRef` (local JSON path + JSON Pointer).
+- `omitted` counts this adapter's result-cap omissions only. Native wrapper
+  omissions stay separately in `providerMeta`; neither measures search coverage.
+- Brave uses its date-range API; Grok uses native date filters and validates
+  model-stated dates. Perplexity/AGY get query hints only. Inspect source dates.
+- `usage` and `reportedCostUsd` preserve reported values where available; null
+  means unknown. External CLI usage is not added to Pi's own token accounting.
+
+Private per-call directories contain `request.json`, `stdout.txt`, `stderr.log`,
+`raw.json` when parseable, and `result.json`. Grok/AGY native traces live beneath
+that directory too. Raw artifacts are not dumped into model context.
+
+Default output is `.artifacts/searches/` under the caller's cwd. Set trusted
+`PI_RESEARCH_ARTIFACT_DIR` to override it. `.artifacts/` is ignored by Git. Keep
+artifacts outside disposable subagent storage before stopping a child.
+
+## Live subagent contact
+
+`pi-test.sh` uses the existing subagent launcher's supported local launcher hook.
+It explicitly loads this extension and codemode, disables unrelated extension
+and skill discovery, and leaves the launcher's own control bridge intact.
+No global install, trust-registry edit, or process-manager modification is needed.
+
+The launcher REQUIRES an explicit durable allowance directory:
+
+```sh
+PI_RESEARCH_EXPERIMENT_DIR="$PWD/.artifacts/nvidia-live-2026-11-09" \
+subagent spawn --name nvidia-live --cwd "$PWD" \
+  --no-extensions --no-skills \
+  --tools read,bash,write,codemode,research_search \
+  --file prompts/nvidia-live.md
+```
+
+The first run is authorized for one search per provider, five leads each, defaults,
+no retries; selected source-page inspection is separate. `PI_RESEARCH_BUDGET_DIR`
+uses atomic provider claim files to prevent repeated wrapper invocations across
+concurrent calls and reloads. A failed invocation still consumes its allowance.
+Do not delete claims or use a fresh directory to evade a spent allowance.
+
+This only limits calls through our wrapper, not arbitrary bash, other tools,
+or hidden remote provider work. It is NOT a sandbox or a hard billing cap.
+Outside this test launcher, the optional budget directory must be set explicitly.
 
 ## Boundaries
 
-- Provider selection is explicit; no automatic fan-out, retries, or fallback.
-- Brave/Perplexity return search results; Grok/AGY return model-extracted leads.
-- Leads are untrusted, not verified facts. Read original sources before relying on them.
-- Reported cost is recorded when available; unknown cost is not zero.
-- Client termination is not a guarantee of remote cancellation or stopped billing.
-- Private live artifacts stay under `.artifacts/` (ignored by Git).
-- No global install or credential/config migration.
+- No automatic fan-out, retries, provider fallback, or model escalation.
+- Queries are passed as argument arrays, never shell strings.
+- Existing provider guardrails and defaults are retained. Grok/AGY request/audit
+  one native search; their audit is not a hard remote spending guarantee.
+- Local 55s deadline; Grok/AGY retain their 45s deadlines. Cancellation sends
+  SIGTERM then escalates locally; remote work/billing may continue.
+- Search text and retrieved pages are untrusted data, not instructions.
+- No automatic source-page reader: inspect selected originals with existing tools.
+- No credential migration, authentication changes, or automatic artifact deletion.
+- Live usability is the spike's test; comparative quality/efficiency is unproven.
