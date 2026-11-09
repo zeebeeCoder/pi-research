@@ -129,6 +129,18 @@ Quality changes were checked against these real captured responses/traces withou
 new provider calls, copied fixtures or a mock harness; see
 [the integration review](docs/integration-quality.md).
 
+## Concurrency and reducer evaluation
+
+The [fresh three-provider/Jev evaluation](docs/evaluation-results-2026-11-09.md)
+measured concurrent retrieval and matched synthesis children. Brave/Perplexity
+finished in about1s; Grok timed out at45s. Jev assessed ten sources in0.613s, but
+the frozen preservation policy kept all ten: **no context reduction or demonstrated
+synthesis-efficiency benefit**. Original and ranked reports took about39s each.
+
+Reports, timings, usage and claim checks are preserved locally. No new searches
+are needed to inspect them; `node eval/measure.mjs` recomputes metrics from the
+captured evidence. All evaluation allowances are spent; AGY stays parked.
+
 ## Boundaries
 
 - No automatic fan-out, retries, provider fallback, or model escalation.

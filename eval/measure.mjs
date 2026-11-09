@@ -91,6 +91,8 @@ const metrics={
     usage:usageTotals(classifier.outcomes.flatMap(o=>o.result?.usage?[o.result.usage]:[])),
     note:'jev-latest is moving; returned alias does not expose an actual pinned version. Zero price estimate is not verified free billing.'},
   selection,collector,arms,
+  orchestrationSpanMs:Math.max(arms.copper.endMs,arms.silver.endMs)-collector.startMs,
+  orchestrationSpanNote:'First collector session entry to last synthesis session entry, including inter-stage parent gaps; excludes setup before collection and review after synthesis.',
   pipelineStageEstimatesMs:{
     baseline:collector.elapsedMs+arms.copper.elapsedMs,
     screened:collector.elapsedMs+classifier.wallTimeMs+arms.silver.elapsedMs,
@@ -101,6 +103,6 @@ const metrics={
   overallInterpretation:'Exploratory pair; no pruning, no input-size reduction. Differences can be ordering, generation variance, cache behavior or contention, not a proven classifier benefit.'
 };
 await writeFile(join(root,'metrics.json'),JSON.stringify(metrics,null,2)+'\n',{mode:0o600});
-console.log(JSON.stringify({retrieval:metrics.retrieval,classifier:metrics.classifier,selection:{selected:selection.selected,omitted:selection.omitted,baselineBytes:selection.baselineBytes,reducedBytes:selection.reducedBytes},
+console.log(JSON.stringify({orchestrationSpanMs:metrics.orchestrationSpanMs,retrieval:metrics.retrieval,classifier:metrics.classifier,selection:{selected:selection.selected,omitted:selection.omitted,baselineBytes:selection.baselineBytes,reducedBytes:selection.reducedBytes},
   collector:{elapsedMs:collector.elapsedMs,usage:collector.usage},
   arms:Object.fromEntries(Object.entries(arms).map(([name,a])=>[name,{elapsedMs:a.elapsedMs,reportReadyMs:a.reportReadyMs,reportUsage:a.reportUsage,usage:a.usage,reportWordCount:a.reportWordCount,factualClaims:a.factualClaims,quotes:a.quotes,quoteMatches:a.quoteMatches,mechanicalErrors:a.mechanicalErrors,reopenedSourceIds:a.reopenedSourceIds}])),pipelineStageEstimatesMs:metrics.pipelineStageEstimatesMs},null,2));
