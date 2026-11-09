@@ -1,0 +1,19 @@
+{
+  "name": "pi-research",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live research spike over existing Brave, Perplexity, Grok X and AGY scripts",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/research.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}
