@@ -47,7 +47,9 @@ export async function grokDiagnostics(artifactDir: string): Promise<GrokDiagnost
     const calls = new Set<string>();
     for (const line of lines) {
       if (!line.trim()) continue;
-      const event: unknown = JSON.parse(line);
+      let event: unknown;
+      try { event = JSON.parse(line); }
+      catch { throw new Error("Native trace contains invalid JSON; accounting inspection is incomplete."); }
       if (!object(event)) continue;
       if (event.type === "tool_call" && event.rawInput?.variant === "XSearch"
         && event.rawInput.backend === true && typeof event.toolCallId === "string") calls.add(event.toolCallId);
