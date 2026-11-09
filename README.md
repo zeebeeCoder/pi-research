@@ -91,6 +91,16 @@ This only limits calls through our wrapper, not arbitrary bash, other tools,
 or hidden remote provider work. It is NOT a sandbox or a hard billing cap.
 Outside this test launcher, the optional budget directory must be set explicitly.
 
+## First live result
+
+The [Nvidia subagent smoke](docs/live-smoke-2026-11-09.md) loaded this extension
+and exercised direct + codemode calls. Brave and Perplexity each returned five
+leads. AGY needed authentication and timed out; Grok completed a search but its
+existing scout rejected malformed result records. No retries were made.
+
+Report: `.artifacts/nvidia-live-2026-11-09/report.md` (local, ignored by Git).
+The allowance is spent. Review the failures before approving another live run.
+
 ## Boundaries
 
 - No automatic fan-out, retries, provider fallback, or model escalation.
