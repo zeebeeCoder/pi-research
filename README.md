@@ -147,8 +147,14 @@ captured evidence. All evaluation allowances are spent; AGY stays parked.
 - Queries are passed as argument arrays, never shell strings.
 - Existing provider guardrails and defaults are retained. Grok/AGY request/audit
   one native search; their audit is not a hard remote spending guarantee.
-- Local 55s deadline; Grok/AGY retain their 45s deadlines. Cancellation sends
-  SIGTERM then escalates locally; remote work/billing may continue.
+- Grok explicitly gets a 90s native deadline and 100s local deadline; other
+  adapters keep 55s locally (AGY's native default remains45s, still parked).
+  Use at least120s if setting a codemode timeout. Cancellation sends SIGTERM then
+  escalates locally; remote work/billing may continue. The shared grok-x CLI's
+  default is unchanged; this package passes its supported `--timeout 90` flag.
+  Historical evaluation results used45s native Grok; the longer setting has not
+  been live-tested yet. `eval/collect.md` preserves that frozen run's70s codemode
+  limit and must not be reused unchanged for a future longer-deadline trial.
 - Search text and retrieved pages are untrusted data, not instructions.
 - No automatic source-page reader: inspect selected originals with existing tools.
 - No credential migration, authentication changes, or automatic artifact deletion.

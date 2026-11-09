@@ -73,14 +73,16 @@ function command(input: SearchInput) {
     if (input.until) args.push("--before", new Date(Date.parse(input.until) - 86400000).toISOString().slice(0, 10));
   }
   if (input.provider === "grok") {
+    args.push("--timeout", "90");
     if (input.since) args.push("--since", input.since);
     if (input.until) args.push("--until", input.until);
   }
-  return { binary, script, args };
+  // Leave grace for the native scout to cancel and persist its own trace.
+  return { binary, script, args, timeoutMs: input.provider === "grok" ? 100_000 : 55_000 };
 }
 
 /** Captures bounded stdout/stderr; existing scout CLIs retain their own stream audits. */
-async function execute(binary: string, args: string[], cwd: string, signal?: AbortSignal) {
+async function execute(binary: string, args: string[], cwd: string, timeoutMs: number, signal?: AbortSignal) {
   if (signal?.aborted) return { stdout: "", stderr: "", code: null, failure: "Cancelled before CLI launch." };
   return await new Promise<{ stdout: string; stderr: string; code: number | null; failure: string | null }>((resolveRun) => {
     const child = spawn(binary, args, {
@@ -101,7 +103,7 @@ async function execute(binary: string, args: string[], cwd: string, signal?: Abo
       escalation = setTimeout(() => send("SIGKILL"), 1500);
     };
     const abort = () => stop("Cancelled locally; remote work/billing may continue.");
-    const deadline = setTimeout(() => stop("55s local deadline exceeded; remote work/billing may continue."), 55000);
+    const deadline = setTimeout(() => stop(`${timeoutMs / 1000}s local deadline exceeded; remote work/billing may continue.`), timeoutMs);
     signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted) abort();
     child.stdout.on("data", (chunk: Buffer) => {
@@ -203,7 +205,7 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
         throw error;
       }
     }
-    const proc = await execute(cmd.binary, cmd.args, artifactDir, options.signal);
+    const proc = await execute(cmd.binary, cmd.args, artifactDir, cmd.timeoutMs, options.signal);
     await writeFile(join(artifactDir, "stdout.txt"), proc.stdout, { mode: 0o600 });
     await writeFile(join(artifactDir, "stderr.log"), proc.stderr, { mode: 0o600 });
     result.partialOutput = !!proc.stdout.trim();

@@ -49,7 +49,9 @@ text({
 
 Use `Promise.allSettled` for authorized independent calls, but inspect each
 fulfilled result's `status` too. An error envelope can fulfill a codemode promise.
-Allow at least 70 seconds if setting a codemode deadline around these searches.
+Allow at least 120 seconds if setting a codemode deadline around these searches:
+Grok now gets a 90-second native budget and 100-second local deadline. Other
+providers keep their previous limits. Cancellation remains available; no retries.
 No retries, provider/model escalation, Perplexity ask or deep research by default.
 
 ## Read the returned state honestly

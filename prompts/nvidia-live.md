@@ -29,7 +29,7 @@ stock moves, causal explanations or supporting evidence to reach three items.
    test all four providers are explicitly authorized; this is not a default
    research policy. At least one call must be directly to research_search and at
    least one through codemode to verify BOTH paths. Independent remaining calls
-   may run via Promise.allSettled. For codemode use timeout_ms: 70000 or no timeout.
+   may run via Promise.allSettled. For codemode use timeout_ms: 120000 or no timeout (current Grok local deadline is 100s).
 4. Each provider allowance is consumed even on failure. NO retries, alternative
    provider invocations, direct CLI searches, Perplexity ask/deep research,
    additional models/classifiers, or nested agents. Do not delete/change claim
