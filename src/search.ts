@@ -28,7 +28,7 @@ const scripts: Record<Provider, [string, string]> = {
   agy: ["node", "agy-search/scripts/agy-search.js"],
 };
 const dateSemantics: Record<Provider, string> = {
-  brave: "Brave freshness range; dates are provider metadata, not independently verified.",
+  brave: "Brave freshness range; source.date carries page_age metadata as supplied (timezone may be absent), not an independently verified publication date.",
   perplexity: "Date window appended to query as a hint, NOT an enforced publication-date filter.",
   grok: "Native since-inclusive/until-exclusive filter, with wrapper filtering on Grok-extracted dates.",
   agy: "Google after/before query hints, NOT verified publication-date filters.",
@@ -122,7 +122,22 @@ async function execute(binary: string, args: string[], cwd: string, signal?: Abo
   });
 }
 
-function normalize(provider: Provider, data: unknown, rawPath: string, limit: number, runId: string) {
+// Brave descriptions contain display markup/entities. Decode once, only for
+// this provider; keep plain-text Perplexity/Grok content untouched and raw saved.
+function braveText(value: string): string {
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+  return value.replace(/<\/?(?:strong|b|em|i|mark|span|br|p)\b[^>]*>/gi, " ")
+    .replace(/&(#x[0-9a-f]+|#[0-9]+|amp|lt|gt|quot|apos|nbsp);/gi, (match, entity: string) => {
+      if (!entity.startsWith("#")) return named[entity.toLowerCase()] ?? match;
+      const hex = entity[1].toLowerCase() === "x";
+      const code = Number.parseInt(entity.slice(hex ? 2 : 1), hex ? 16 : 10);
+      return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : match;
+    });
+}
+
+// Internal transformation exported for inspection against actual saved responses;
+// it never invokes a provider or modifies an artifact.
+export function normalize(provider: Provider, data: unknown, rawPath: string, limit: number, runId: string) {
   if (!object(data)) throw new Error("Provider JSON must be an object.");
   let records: unknown, pointer: string;
   if (provider === "brave") {
@@ -138,16 +153,20 @@ function normalize(provider: Provider, data: unknown, rawPath: string, limit: nu
   const sources: Source[] = records.slice(0, limit).map((item, index) => {
     if (!object(item) || typeof item.url !== "string") throw new Error("Malformed source URL.");
     const url = new URL(item.url);
-    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Non-HTTP or credential-bearing source URL.");
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || /[\x00-\x20\x7f]/.test(item.url)) {
+      throw new Error("Non-HTTP, credential-bearing or control/space-containing source URL.");
+    }
     const title = provider === "grok" ? item.author ?? "Unknown X author" : item.title;
     const text = provider === "brave" ? item.description : provider === "grok" ? item.excerpt : item.snippet;
     if (typeof title !== "string" || typeof text !== "string") throw new Error("Malformed source title/text.");
-    const cleaned = clean(text);
+    const cleaned = Array.from(clean(provider === "brave" ? braveText(text) : text));
+    const cleanedTitle = Array.from(clean(provider === "brave" ? braveText(title) : title));
+    const date = provider === "brave" ? item.page_age : item.date;
     return {
-      id: `${runId}:${index + 1}`, title: clean(title).slice(0, 240), url: item.url,
-      text: cleaned.slice(0, 1000), date: typeof item.date === "string" ? item.date : null,
+      id: `${runId}:${index + 1}`, title: cleanedTitle.slice(0, 240).join(""), url: item.url,
+      text: cleaned.slice(0, 1000).join(""), date: typeof date === "string" ? date : null,
       kind: provider === "grok" || provider === "agy" ? "model-extracted-lead" : "search-result",
-      verified: false, truncated: item.truncated === true || cleaned.length > 1000,
+      verified: false, truncated: item.truncated === true || cleaned.length > 1000 || cleanedTitle.length > 240,
       rawRef: `${rawPath}#${pointer}/${index}`,
     };
   });
