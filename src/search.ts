@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { grokDiagnostics, reportedCost, scoutError } from "./diagnostics.ts";
 
 export const providers = ["brave", "perplexity", "grok", "agy"] as const;
 export type Provider = (typeof providers)[number];
@@ -80,6 +81,7 @@ function command(input: SearchInput) {
 
 /** Captures bounded stdout/stderr; existing scout CLIs retain their own stream audits. */
 async function execute(binary: string, args: string[], cwd: string, signal?: AbortSignal) {
+  if (signal?.aborted) return { stdout: "", stderr: "", code: null, failure: "Cancelled before CLI launch." };
   return await new Promise<{ stdout: string; stderr: string; code: number | null; failure: string | null }>((resolveRun) => {
     const child = spawn(binary, args, {
       cwd, shell: false, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"],
@@ -156,7 +158,6 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
   validate(input);
   if (options.signal?.aborted) throw new Error("Cancelled before invocation; no budget consumed.");
   const cmd = command(input);
-  await access(cmd.script);
   const root = resolve(process.env.PI_RESEARCH_ARTIFACT_DIR || join(options.cwd, ".artifacts", "searches"));
   const runId = `${input.provider}-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   const artifactDir = join(root, runId);
@@ -169,6 +170,9 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
   };
   await save(join(artifactDir, "request.json"), { ...input, limit: input.limit ?? 5, ...cmd, startedAt: new Date().toISOString() });
   try {
+    // Missing installations are structured failures and do not consume the allowance.
+    await access(cmd.script);
+    if (options.signal?.aborted) throw new Error("Cancelled before CLI launch; no budget consumed.");
     // Optional persistent per-experiment allowance. Atomic claim prevents races/reloads
     // from spending twice. Failed invocations also consume the allowance; never retry.
     if (process.env.PI_RESEARCH_BUDGET_DIR) {
@@ -184,8 +188,19 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
     await writeFile(join(artifactDir, "stdout.txt"), proc.stdout, { mode: 0o600 });
     await writeFile(join(artifactDir, "stderr.log"), proc.stderr, { mode: 0o600 });
     result.partialOutput = !!proc.stdout.trim();
+    // Preserve accounting and schema warnings even when the upstream wrapper
+    // rejects its output. Metadata is NOT grounds to promote failed sources.
+    const diagnostics = input.provider === "grok" ? await grokDiagnostics(artifactDir) : null;
+    if (diagnostics) {
+      result.providerMeta = { integrationDiagnostics: diagnostics };
+      result.usage = diagnostics.usage;
+      result.reportedCostUsd = diagnostics.reportedCostUsd;
+    }
     if (proc.failure) throw new Error(proc.failure);
-    if (proc.code !== 0) throw new Error(`Provider CLI exited ${proc.code}; inspect stderr.log and native trace. No retry.`);
+    if (proc.code !== 0) {
+      const detail = input.provider === "grok" || input.provider === "agy" ? scoutError(proc.stderr) : null;
+      throw new Error(`Provider CLI exited ${proc.code}; ${detail ?? "inspect stderr.log and native trace"}. No retry.`);
+    }
     let data: unknown;
     try { data = JSON.parse(proc.stdout); } catch { throw new Error("Provider stdout is not valid JSON."); }
     result.rawPath = join(artifactDir, "raw.json");
@@ -193,10 +208,11 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
     const normalized = normalize(input.provider, data, result.rawPath, input.limit ?? 5, runId);
     result.sources = normalized.sources;
     result.omitted = normalized.omitted;
-    result.providerMeta = normalized.meta;
-    result.usage = normalized.meta?.usage ?? null;
-    const cost = normalized.meta?.reported_cost_usd;
-    result.reportedCostUsd = typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? cost : null;
+    result.providerMeta = diagnostics
+      ? { ...normalized.meta, integrationDiagnostics: diagnostics }
+      : normalized.meta;
+    result.usage = normalized.meta?.usage ?? result.usage;
+    result.reportedCostUsd = reportedCost(normalized.meta?.reported_cost_usd) ?? result.reportedCostUsd;
     result.status = result.sources.length ? "completed" : "empty";
     result.partialOutput = false;
   } catch (error) {
