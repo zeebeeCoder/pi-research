@@ -21,6 +21,23 @@ patch --dry-run -p1 < /path/to/pi-research/patches/grok-x-structured-output.patc
 patch -p1 < /path/to/pi-research/patches/grok-x-structured-output.patch
 ```
 
+Patched script SHA-256:
+`ade9eaca9f3b9194040f255babeb4bf0f64c34411cbad4aa6af0dc133c8ab9c6`
+
 Original private backups and live repair artifacts are under
-`.artifacts/provider-repair-2026-11-09/`. Live compatibility is pending; no schema
-compliance or efficiency guarantee is implied by the flag alone.
+`.artifacts/provider-repair-2026-11-09/`. One authorized real call on Grok Build
+1.0.70 returned four accepted leads in 11.239s, one audited native search and one
+model call, reported cost $0.041042. This follow-up invoked the same adapter via
+Bun directly, not another child; the original child already verified the tool paths.
+
+**Remaining caveat:** native `structuredOutputError` reported an excerpt over 220
+characters. The existing normalizer accepted the valid record shape, clipped the
+excerpt and marked it `truncated`; it was not changed. Thus normalized discovery
+output works, but full native-schema compliance is NOT proven. The CLI flag is
+not assumed to enforce all constraints. Do not remove the limit, ignore the
+warning in evaluation, or claim independently verified evidence. Two returned
+leads were @grok bot replies, not independent human corroboration.
+
+AGY has not been called again: its new allowance is reserved until the human
+finishes interactive authentication. The original four-provider allowance and
+report are untouched.
