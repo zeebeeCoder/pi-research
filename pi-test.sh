@@ -8,4 +8,5 @@ export PI_RESEARCH_ARTIFACT_DIR="$PI_RESEARCH_EXPERIMENT_DIR/searches"
 export PI_RESEARCH_BUDGET_DIR="$PI_RESEARCH_EXPERIMENT_DIR/allowance"
 # subagent --no-extensions also explicitly loads its own control bridge.
 exec pi --approve --no-extensions --no-skills --no-mcp --no-prompt-templates \
-  --extension "$ROOT/extensions/research.ts" --extension builtin:codemode "$@"
+  --extension "$ROOT/extensions/research.ts" --extension builtin:codemode \
+  --skill "$ROOT/skills/research-method/SKILL.md" "$@"

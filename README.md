@@ -14,6 +14,15 @@ pi -e ./extensions/research.ts --tools +codemode
 pi --approve
 ```
 
+The package includes `/skill:research-method` for question framing, provider
+selection, source inspection, uncertainty and compact handback. It does not grant
+a live allowance. Explicit-file loading can include it with
+`--skill ./skills/research-method/SKILL.md`; project package loading discovers it.
+
+Current focus: **Brave, Perplexity search and Grok**. AGY remains implemented but
+parked until the human can complete authentication; no AGY call should be made
+under the current quality-review work.
+
 The package has no runtime npm dependencies. Pi provides its extension API/types.
 Prerequisites: Bun, Node, and the four existing skills under
 `~/.pi/agent/skills/{brave-search,perplexity-search,grok-x,agy-search}`. Their
@@ -50,10 +59,21 @@ check `status`, not just whether the promise fulfilled.
 - Each source has an ID and `rawRef` (local JSON path + JSON Pointer).
 - `omitted` counts this adapter's result-cap omissions only. Native wrapper
   omissions stay separately in `providerMeta`; neither measures search coverage.
-- Brave uses its date-range API; Grok uses native date filters and validates
-  model-stated dates. Perplexity/AGY get query hints only. Inspect source dates.
-- `usage` and `reportedCostUsd` preserve reported values where available; null
-  means unknown. External CLI usage is not added to Pi's own token accounting.
+- Brave uses its date-range API and exposes `page_age` in `source.date` without
+  inventing a timezone. This is provider metadata, not verified publication time.
+  Grok uses native date filters and validates model-stated dates. Perplexity/AGY
+  get query hints only. Inspect source dates, especially on indexes/homepages.
+- Brave display tags/entities are removed/decoded in the compact view only.
+  Raw content is unchanged. Shortening is Unicode-safe and marks `truncated`.
+- Grok `providerMeta.integrationDiagnostics` exposes native schema warnings,
+  trace-inspection errors, accounting and observed native search starts. Inspect
+  it on successes AND failures; normalized success is not native-schema compliance.
+  Diagnostics only read the bounded trace under this call's own artifact directory;
+  they never follow a path from retrieved content or expose raw model thoughts.
+- `usage` and `reportedCostUsd` preserve reported values where available, including
+  Grok output rejected by its wrapper. Null means unknown. External CLI usage is
+  not added to Pi's own token accounting. Structured scout error messages are
+  returned in `error`; detailed raw logs remain in the artifact directory.
 
 Private per-call directories contain `request.json`, `stdout.txt`, `stderr.log`,
 `raw.json` when parseable, and `result.json`. Grok/AGY native traces live beneath
@@ -66,8 +86,9 @@ artifacts outside disposable subagent storage before stopping a child.
 ## Live subagent contact
 
 `pi-test.sh` uses the existing subagent launcher's supported local launcher hook.
-It explicitly loads this extension and codemode, disables unrelated extension
-and skill discovery, and leaves the launcher's own control bridge intact.
+It explicitly loads this extension, codemode and the packaged research-method
+skill, disables unrelated extension/skill discovery, and leaves the launcher's
+own control bridge intact.
 No global install, trust-registry edit, or process-manager modification is needed.
 
 The launcher pins the approved durable allowance directory to
@@ -99,7 +120,14 @@ leads. AGY needed authentication and timed out; Grok completed a search but its
 existing scout rejected malformed result records. No retries were made.
 
 Report: `.artifacts/nvidia-live-2026-11-09/report.md` (local, ignored by Git).
-The allowance is spent. Review the failures before approving another live run.
+The original allowance is spent. A separately approved Grok follow-up returned
+four usable leads; its native excerpt-length warning remains significant. See
+[the upstream patch and recovery notes](patches/README.md). AGY's reserved
+follow-up is parked, not permission to call it during integration-quality work.
+
+Quality changes were checked against these real captured responses/traces without
+new provider calls, copied fixtures or a mock harness; see
+[the integration review](docs/integration-quality.md).
 
 ## Boundaries
 

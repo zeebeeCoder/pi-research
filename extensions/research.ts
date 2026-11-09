@@ -13,7 +13,7 @@ const sourceSchema = Type.Object({
 const researchSearch = defineTool({
   name: "research_search",
   label: "Research search",
-  description: "One paid/live search via an existing provider script. Select brave/perplexity for web search results, grok for X commentary leads, agy for Google-backed model-extracted leads. No synthesis, page reading, deep research, retries or fallback. All sources remain unverified. Dates are provider-specific hints/filters, not verified dates. Returns structured results and durable artifact paths; inspect status even in codemode. Each call needs an approved live allowance.",
+  description: "One paid/live search via an existing provider script. Select brave/perplexity for web search results, grok for X commentary leads, agy for Google-backed model-extracted leads. No synthesis, page reading, deep research, retries or fallback. All sources remain unverified. Dates are provider-specific hints/filters, not verified dates. Returns structured results and durable artifact paths; inspect status AND providerMeta.integrationDiagnostics even in codemode. Completion is not warning-free native schema compliance; failed calls can still incur reported cost. Each call needs an approved live allowance.",
   namespace: { name: "research", description: "Bounded live source discovery with preserved provenance." },
   parameters: Type.Object({
     provider: Type.Union([Type.Literal("brave"), Type.Literal("perplexity"), Type.Literal("grok"), Type.Literal("agy")]),
