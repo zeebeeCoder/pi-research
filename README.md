@@ -70,10 +70,11 @@ It explicitly loads this extension and codemode, disables unrelated extension
 and skill discovery, and leaves the launcher's own control bridge intact.
 No global install, trust-registry edit, or process-manager modification is needed.
 
-The launcher REQUIRES an explicit durable allowance directory:
+The launcher pins the approved durable allowance directory to
+`.artifacts/nvidia-live-2026-11-09` (arbitrary client environment variables do not
+reliably propagate through tmux). Changing this path requires a new allowance.
 
 ```sh
-PI_RESEARCH_EXPERIMENT_DIR="$PWD/.artifacts/nvidia-live-2026-11-09" \
 subagent spawn --name nvidia-live --cwd "$PWD" \
   --no-extensions --no-skills \
   --tools read,bash,write,codemode,research_search \
