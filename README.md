@@ -3,8 +3,8 @@
 A local live-provider spike for Pi. `research_search` wraps the existing Brave,
 Perplexity search, Grok X and AGY scout scripts. `research_prepare` and
 `research_review` provide optional static qualification around Pi's existing Jev
-integration. No new provider clients, offline fixtures, classifier SDK, evidence
-database, or deep research.
+integration. No new provider clients, classifier SDK, evidence database, or deep
+research.
 
 ## Load locally
 
@@ -30,6 +30,20 @@ Prerequisites: Bun, Node, and the four existing skills under
 `~/.pi/agent/skills/{brave-search,perplexity-search,grok-x,agy-search}`. Their
 existing credentials/authentication stay in place. This is a machine-local spike,
 not a standalone portable distribution.
+
+## Offline regression tests
+
+```sh
+bun run test
+```
+
+Requires Bun; no dependency installation, credentials, network calls, or Pi session
+needed. Tests exercise local preparation/review with isolated temporary storage
+and synthetic boundary inputs, plus pure normalization and recency checks. They
+cover inspection URL rejection, source retention, invalid/missing answers,
+prepared-state consistency and non-overwriting review output. Synthetic inputs
+are not live-provider compatibility or research-quality evidence. CLI cancellation,
+concurrent allowance claims and live extension loading are not covered by this suite.
 
 ## Call it
 
@@ -93,6 +107,12 @@ supplied dates; ambiguous timestamps are not silently assigned UTC. The static
 questions cover topic contribution, context/caveats, authenticity and contextual
 source/profile credibility. Missing identity/expertise evidence remains unknown;
 source brands, badges and writing style are not authentication.
+
+Source, profile-evidence and explicitly supplied inspection URLs must be
+credential-free HTTP(S) references without spaces or control characters. An omitted
+inspection URL defaults to the source URL. Validation runs during preparation and
+saved-batch review; it does not authenticate content or detect secrets embedded in
+prose or URL query parameters. Callers must still supply only public material.
 
 Preparation does **not** call a model or grant an allowance. With separate
 approval, classify its requests through Pi's existing Jev integration: two small

@@ -48,6 +48,7 @@ export function recency(raw: string | null, since: string, until: string, asOf: 
 function sourceState(source: Candidate, brief: Brief, asOf: string) {
   const u = publicUrl(source.url);
   for (const e of source.profileEvidence ?? []) publicUrl(e.url);
+  if (source.inspection?.url !== undefined) publicUrl(source.inspection.url);
   return {
     researchQuestion: brief.question,
     window: { since: brief.since, until: brief.until, untilExclusive: true, asOf },
