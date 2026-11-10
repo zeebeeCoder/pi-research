@@ -1,8 +1,10 @@
 # pi-research
 
-A local live-provider spike for Pi. One tool, `research_search`, wraps the existing
-Brave, Perplexity search, Grok X and AGY scout scripts. No new provider clients,
-offline fixtures, classifier models, evidence database, or deep research.
+A local live-provider spike for Pi. `research_search` wraps the existing Brave,
+Perplexity search, Grok X and AGY scout scripts. `research_prepare` and
+`research_review` provide optional static qualification around Pi's existing Jev
+integration. No new provider clients, offline fixtures, classifier SDK, evidence
+database, or deep research.
 
 ## Load locally
 
@@ -82,6 +84,32 @@ that directory too. Raw artifacts are not dumped into model context.
 Default output is `.artifacts/searches/` under the caller's cwd. Set trusted
 `PI_RESEARCH_ARTIFACT_DIR` to override it. `.artifacts/` is ignored by Git. Keep
 artifacts outside disposable subagent storage before stopping a child.
+
+## Optional static qualification
+
+`research_prepare({question, since, until, sources})` saves all original records
+and fills `profiles/qualification-v3.json` in code. Recency is computed from
+supplied dates; ambiguous timestamps are not silently assigned UTC. The static
+questions cover topic contribution, context/caveats, authenticity and contextual
+source/profile credibility. Missing identity/expertise evidence remains unknown;
+source brands, badges and writing style are not authentication.
+
+Preparation does **not** call a model or grant an allowance. With separate
+approval, classify its requests through Pi's existing Jev integration: two small
+passes per source, max15 sources/30 calls, concurrency4, no retries. There is no
+per-source LLM prompt generation or automatic profile lookup.
+
+`research_review({batchId, responses})` validates captured answers and saves a
+ranked view plus needs-context, needs-evidence and material-qualification indexes.
+All material remains available. Provenance unknowns don't erase comparable topic
+scores, and no signal is silently combined into a scalar truth/credibility score.
+Both local tools return structured data in codemode and concise direct summaries.
+Artifacts default to `.artifacts/qualifications/`; a trusted
+`PI_RESEARCH_QUALIFICATION_DIR` can override this. They never fetch rawRef paths.
+
+The new bounded whole-workflow contact is
+`eval/qualification-v3/contact.md`, with its own fixed launcher and single-claim
+classifier runner. These are not permission to repeat a spent experiment.
 
 ## Live subagent contact
 

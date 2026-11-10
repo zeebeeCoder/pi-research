@@ -1,6 +1,6 @@
 ---
 name: research-method
-description: Research a current question using pi-research's structured Brave, Perplexity and Grok source discovery, then inspect selected originals and produce a concise, traceable answer. Use for news, market developments or multi-source comparisons; requires an explicit live-call allowance. No automatic fan-out, deep research, or extra models.
+description: Research a current question using pi-research's structured Brave, Perplexity and Grok source discovery, then inspect selected originals and produce a concise, traceable answer. Use for news, market developments or multi-source comparisons; requires an explicit live-call allowance. No automatic fan-out or deep research. Optional Jev qualification requires its own explicit allowance.
 ---
 
 # Research with traceable sources
@@ -94,6 +94,38 @@ If the reader can't isolate content reliably, state that limitation.
 An inaccessible page remains snippet-only. No silent retries or extra searches.
 Be explicit when an official index was inspected but the full release was not.
 Source inspection and mechanical reference checks do not establish factual truth.
+
+## Optional static qualification (only with a separate Jev allowance)
+
+Use `research_prepare` in codemode with the framed question, explicit UTC date
+bounds and actual source records. It fills a versioned static template in code:
+no per-item LLM prompt generation. It preserves originals and computes recency
+from unverified supplied dates; timezone-free timestamps stay ambiguous.
+
+The frozen `profiles/qualification-v3.json` has two small passes per item:
+- Ranking: topic contribution, context sufficiency, material qualifications.
+- Provenance: authenticity of claimed origin, contextual source/profile footing.
+
+These are advisory signals, not authentication or truth certificates. A familiar
+brand, badge or writing style does not establish credibility or AI authorship.
+Model-extracted discovery is separate from original authorship. Only supply
+profileEvidence actually gathered with source URLs; otherwise leave it absent.
+No automatic profile crawling. Missing evidence is unknown, not low relevance.
+
+Preparation makes no model/network calls and grants no classifier allowance.
+With explicit approval, use Pi's existing `models.classify` integration on the
+returned requests, at most4 concurrently, no retries or fallback. Each item costs
+two classifier calls, not one; max15 items/30 calls in this profile. Preserve raw
+responses, usage, timings and errors outside disposable child storage. The bounded
+reference runner is `eval/qualification-v3/run-classifier.js`; its run-root claim
+is an execution guard, not a remote billing sandbox or permission for a new run.
+
+Call `research_review` with the batch ID and captured source/pass-linked responses.
+It makes no live calls. It validates outputs and saves the full source-linked view,
+ranked IDs, needs-context IDs, needs-evidence IDs and material-qualification index.
+Unknown provenance remains visible without erasing a comparable topic rank.
+No automatic exclusions, hidden weighted trust score or confidence-as-truth.
+Review positive authenticity/credibility labels against evidence yourself.
 
 ## Answer and hand back
 
