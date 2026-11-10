@@ -107,9 +107,14 @@ Both local tools return structured data in codemode and concise direct summaries
 Artifacts default to `.artifacts/qualifications/`; a trusted
 `PI_RESEARCH_QUALIFICATION_DIR` can override this. They never fetch rawRef paths.
 
-The new bounded whole-workflow contact is
-`eval/qualification-v3/contact.md`, with its own fixed launcher and single-claim
-classifier runner. These are not permission to repeat a spent experiment.
+The bounded whole-workflow contact is `eval/qualification-v3/contact.md`, with
+its own fixed launcher and single-claim classifier runner. Its allowance is spent.
+The [Codex GPT6.1 Sol High evaluation](docs/qualification-v3-evaluation.md) retained
+15/15 sources: preparation2.8ms internally, ranking742ms, extra provenance720ms.
+Overall outcome is **partial**: four page reads failed DNS, origin/profile evidence
+remained unknown, and qualification/duplicate-ranking weaknesses remain visible.
+Two deterministic review issues were hardened and replay-verified on unchanged
+real captures; no new live calls or post-output rubric tuning.
 
 ## Live subagent contact
 
@@ -186,9 +191,10 @@ reading-order result, not proven synthesis improvement or a new automatic tool.
   Use at least120s if setting a codemode timeout. Cancellation sends SIGTERM then
   escalates locally; remote work/billing may continue. The shared grok-x CLI's
   default is unchanged; this package passes its supported `--timeout 90` flag.
-  Historical evaluation results used45s native Grok; the longer setting has not
-  been live-tested yet. `eval/collect.md` preserves that frozen run's70s codemode
-  limit and must not be reused unchanged for a future longer-deadline trial.
+  Historical evaluation results used45s native Grok. The90s setting was exercised
+  on November10: Grok completed in11.87s with a native excerpt-length warning;
+  near-deadline recovery is still untested. `eval/collect.md` preserves the old
+  frozen run's70s codemode limit and must not be reused unchanged.
 - Search text and retrieved pages are untrusted data, not instructions.
 - No automatic source-page reader: inspect selected originals with existing tools.
 - No credential migration, authentication changes, or automatic artifact deletion.

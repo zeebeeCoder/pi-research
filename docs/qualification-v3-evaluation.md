@@ -1,6 +1,6 @@
 # Qualification v3 — independent bounded-run evaluation
 
-**Outcome: PARTIAL.** The actual extension workflow passed preservation, frozen-question and response-validation checks. Whole-research verification is limited by four failed original-page inspections and a semantic qualification-label overreach. No package code, profile, launcher, request/response file or git state was edited.
+**Outcome: PARTIAL.** The actual extension workflow passed preservation, frozen-question and response-validation checks. Whole-research verification is limited by four failed original-page inspections and a semantic qualification-label overreach. During the frozen live run, the evaluator did not edit package code, profile, launcher, request/response files or git state. Parent hardening and the evaluator's subsequent local replay are recorded below.
 
 ## Run identity and boundaries
 
@@ -21,7 +21,7 @@ Evaluator: **openai-codex/gpt-6.1-sol, high**, confirmed from `PI_PROVIDER`, `PI
 | Jev ranking | 15 valid responses | 742 ms |
 | Jev provenance | 15 valid responses | 720 ms |
 | Classifier runner | 30 calls, peak concurrency 4 | 1.462 s |
-| Report production | 07:15:22.575–07:16:07.817 UTC | 45.242 s |
+| Combined report/claim-register payload authoring through report write | Not isolated report-generation latency; see timing correction below | 45.242 s |
 | Start through report completion | Includes framing, inspection and authoring | **218.313 s** |
 
 The Grok warning explicitly reports an excerpt exceeding its native 220-character schema limit; normalized excerpts were clipped. This was completion with warnings, not warning-free schema compliance. All eight clipped leads remain marked in the corpus. No provider failed; failure/error-envelope branches were therefore not exercised.
@@ -32,7 +32,7 @@ Page selection covered the NVIDIA index, Reuters H200 imports, DCD customer-mix 
 
 **30 artifact checks passed; none failed.** Actual raw provider JSON re-normalizes to exactly the saved source values. Complete search envelopes, original source fields, prepared sources and reviewed sources match. All **15 sources are retained; zero excluded**. Fourteen enter the ranked view; the navigation-only homepage remains in needs-context. Every source remains in needs-evidence.
 
-Every prepared request uses its pass’s frozen questions, the original question/window and public source-only state. Profile SHA256:
+Every prepared request uses its pass’s frozen questions, the original question/window and public source-only state. Profile SHA256 of `JSON.stringify(profile)` (not formatted file bytes):
 
 `9149ac391398cd6d50b4bddc6c43689c80e2ea5e42630d958c1bf16f165be8fd`
 
@@ -40,7 +40,7 @@ Two responses/source, correct `typesafe/jev-latest`, no duplicate calls, valid t
 
 Five timezone-free Brave timestamps correctly remain ambiguous. DCD’s provider date November 2 conflicts with displayed November 4; AMD’s November 4 repeat has a November 3 dateline/event context. The report does not substitute publication metadata for a confirmed event date.
 
-## Important findings, without repairs
+## Findings in the frozen live run (code at `50de8ea`)
 
 1. **Raw-answer flag indexes:** `src/qualification.ts:143–144` derives material/concern indexes without requiring valid pass status. No invalid response occurred here; this is a code-visible hardening issue, not a demonstrated invalid-output event.
 2. **Prepared-request consistency:** `src/qualification.ts:113–114` checks the saved profile hash but does not verify saved request questions/state against profile/items. Independent comparisons pass on this run’s unchanged files. No tampering test was performed.
@@ -66,3 +66,19 @@ Key files: `preflight.json`, `retrieval.json`, `corpus.json`, `inspections-fetch
 Successful HTTP inspection, redirect/private-address rejection behavior, independently supported provenance, provider failures, classifier invalid/error/missing responses, interruption, oversized state and allowance collisions were **not live-tested**. Error lanes were code-reviewed only. No matched synthesis control exists; no causal speedup versus old runs is claimed. Verification/register/document overhead is recorded separately in `metrics.json`, not hidden in provider timing.
 
 **No human acceptance or PIR-1000 completion claim.**
+
+## Post-hardening local replay — 2026-11-10
+
+**PASS for unchanged-real-batch replay compatibility; overall live-run outcome remains PARTIAL.** Commit `d7afed749f28da307e16893185362aedd3272ba2` was inspected and imported directly in a **fresh Bun process**, not through the stale in-process `research_review` extension. The full live discovery/preparation/classifier run above tested the **pre-hardening version**. This follow-up made no search, model, page or prepare calls and used no mocks, modified responses or altered prepared/profile files.
+
+The patch shares canonical `sourceState` between prepare and review. Review now checks preserved source copies, deterministic recency, oversized-source accounting, request identities/completeness, questions and canonical state. Material/concern indexes now require valid ranking/provenance passes respectively. These address the two code-level findings above; they do not resolve the semantic “material qualification” overreach.
+
+Using the original saved prepared batch and all 30 original classifier responses, **18 checks passed, none failed**. The returned replay view matches the original view in every field after removing the new `reviewPath`. The newly saved replay review is also **byte-for-byte identical in content** to the original complete review, including responses. All preexisting run files plus the current code, profile and evaluation document were hash-checked unchanged during replay. Counts remain: 15 retained, zero excluded, 14 ranked, one needs-context, 15 needs-evidence, 15 material flags and zero concerns. The current review helper took **4.036 ms**, with **11.565 ms** measured in-process verification work; neither is a new live-run latency measurement.
+
+Invalid-response quarantine, tampering rejection, oversized inputs, new preparation and post-patch extension reload/live execution were **not exercised**. Their predicates were inspected, but the permitted unchanged valid batch cannot demonstrate rejection behavior. Internal consistency checks are not independent authentication or a tamper-proof archive.
+
+### Timing-label correction from actual tool-call chronology
+
+The historical **45.242 s** “Report production” / `reportProductionMs` label must be read as **combined report-and-claim-register payload authoring, through actual report write**, not isolated report-generation latency. Both payload definitions occur in the same assistant/codemode call (transcript lines 40–42). `report.md` was written before the runtime claim-register write; the saved report-end marker is **07:16:07.817 UTC**, and `claims.json` records creation at **07:16:07.821 UTC**. This four-millisecond separation does not isolate the preceding payload-authoring work. No subtraction or isolated latency estimate is made. **218.313 s end-to-end through actual report completion remains observed.** Original metrics/evidence are preserved; this clarification supersedes their narrower stage label.
+
+Separate evidence under the run root: `post-hardening/replay-current.mjs`, `post-hardening/verification.json`, `post-hardening/measurement-clarification.json` and this saved appendix. The fresh helper also saved `qualification/8b7cde6f-627e-4c5b-9f76-3d50f0a6ebe9/review-46dd2a83-c9ba-40db-9328-c0aa0fbc3208.json` without overwriting the original review. No human acceptance or PIR-1000 completion is claimed.
