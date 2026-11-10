@@ -1,7 +1,7 @@
 # Codex verification + whole-research evaluation — qualification v3
 
-Repository: /home/sagent/code/opti/pi-research
-Durable run root: /home/sagent/code/opti/pi-research/.artifacts/nvidia-qualification-v3-2026-11-10
+Run from the repository root; all paths below are relative to it.
+Durable run root: `.artifacts/nvidia-qualification-v3-2026-11-10`
 Requested evaluator: openai-codex/gpt-6.1-sol, thinking high. No fallback.
 User approved adding authenticity, recency, profile/source and topic qualification,
 and explicitly requested this subagent for evaluation/verification. You are the
@@ -85,7 +85,7 @@ Store output as qualificationPrepared and set qualificationAllowance to:
 Read eval/qualification-v3/run-classifier.js and execute it UNCHANGED in codemode:
 
     // @options: {"timeout_ms": 180000, "max_output_tokens": 3000}
-    const script = await tools.read({path:"/home/sagent/code/opti/pi-research/eval/qualification-v3/run-classifier.js",offset:null,limit:null});
+    const script = await tools.read({path:"eval/qualification-v3/run-classifier.js",offset:null,limit:null});
     await eval('(async () => {\n' + script + '\n})()');
 
 This executes audited local code, never retrieved source content. It makes an
@@ -138,5 +138,5 @@ this bounded run; state that explicitly.
 Write docs/qualification-v3-evaluation.md (run evidence/findings, not new contracts).
 End with a concise pass/partial/fail report, important bugs, timings, provider and
 classifier outcomes, claim checks and artifact paths. State what was NOT tested.
-Do not claim human acceptance or mark PIR-1000 done. Parent will preserve your
+Do not claim human acceptance or mark the tracking task done. Parent will preserve your
 transcript/metadata and stop the child after review. Do not stop yourself.

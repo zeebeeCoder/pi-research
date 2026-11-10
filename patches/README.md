@@ -1,9 +1,9 @@
 # Machine-local upstream patches
 
 `grok-x-structured-output.patch` is applied to the existing shared skill at
-`/home/sagent/vaults/skills/grok-x` (also symlinked from `~/.pi/agent/skills/grok-x`).
-That directory is not a Git repository, so this patch versions the small upstream
-change without vendoring or rewriting the provider client.
+`~/.pi/agent/skills/grok-x` (which may be a symlink).
+This patch versions the small upstream change without vendoring or rewriting
+the provider client.
 
 Base `scripts/grok-x.js` SHA-256:
 `d4d1f621f6dddccad2d005dd74ea09139d753fa92df0572d4e60111c485ab48d`

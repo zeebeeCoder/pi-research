@@ -59,13 +59,13 @@ The pre-classifier checklist has six anchors. Coverage at 1/3/5 is **1/1/1 origi
 
 ## Evidence and untested areas
 
-Run root: `/home/sagent/code/opti/pi-research/.artifacts/nvidia-qualification-v3-2026-11-10`.
+Run root (repository-relative): `.artifacts/nvidia-qualification-v3-2026-11-10`.
 
-Key files: `preflight.json`, `retrieval.json`, `corpus.json`, `inspections-fetch.json`, `reference-review.json`, `source-register.json`, `preparation-metrics.json`, `classifier.json`, `responses/`, `report-timing.json`, `report.md`, `claims.json`, `verification.json`, `metrics.json`, and `native-normalization-verification.json`. Frozen prepared/review artifacts are under `qualification/8b7cde6f-627e-4c5b-9f76-3d50f0a6ebe9/`.
+Key files: `preflight.json`, `retrieval.json`, `corpus.json`, `inspections-fetch.json`, `reference-review.json`, `source-register.json`, `preparation-metrics.json`, `classifier.json`, `responses/`, `report-timing.json`, `report.md`, `claims.json`, `verification.json`, `metrics.json`, and `native-normalization-verification.json`. Frozen prepared/review artifacts are under `qualification/<batch-id>/`.
 
 Successful HTTP inspection, redirect/private-address rejection behavior, independently supported provenance, provider failures, classifier invalid/error/missing responses, interruption, oversized state and allowance collisions were **not live-tested**. Error lanes were code-reviewed only. No matched synthesis control exists; no causal speedup versus old runs is claimed. Verification/register/document overhead is recorded separately in `metrics.json`, not hidden in provider timing.
 
-**No human acceptance or PIR-1000 completion claim.**
+**No human acceptance or tracking-task completion claim.**
 
 ## Post-hardening local replay — 2026-11-10
 
@@ -81,4 +81,4 @@ Invalid-response quarantine, tampering rejection, oversized inputs, new preparat
 
 The historical **45.242 s** “Report production” / `reportProductionMs` label must be read as **combined report-and-claim-register payload authoring, through actual report write**, not isolated report-generation latency. Both payload definitions occur in the same assistant/codemode call (transcript lines 40–42). `report.md` was written before the runtime claim-register write; the saved report-end marker is **07:16:07.817 UTC**, and `claims.json` records creation at **07:16:07.821 UTC**. This four-millisecond separation does not isolate the preceding payload-authoring work. No subtraction or isolated latency estimate is made. **218.313 s end-to-end through actual report completion remains observed.** Original metrics/evidence are preserved; this clarification supersedes their narrower stage label.
 
-Separate evidence under the run root: `post-hardening/replay-current.mjs`, `post-hardening/verification.json`, `post-hardening/measurement-clarification.json` and this saved appendix. The fresh helper also saved `qualification/8b7cde6f-627e-4c5b-9f76-3d50f0a6ebe9/review-46dd2a83-c9ba-40db-9328-c0aa0fbc3208.json` without overwriting the original review. No human acceptance or PIR-1000 completion is claimed.
+Separate evidence under the run root: `post-hardening/replay-current.mjs`, `post-hardening/verification.json`, `post-hardening/measurement-clarification.json` and this saved appendix. The fresh helper also saved `qualification/<batch-id>/review-<review-id>.json` without overwriting the original review. Batch/review identifiers are omitted from this public summary. No human acceptance or tracking-task completion is claimed.

@@ -1,7 +1,7 @@
 # Nvidia live subagent smoke — 2026-11-09
 
 Implementation tested: `95ee0b8` (wrappers introduced in `5ed8f2e`).
-Child: `nvidia-live` / `c1dea0`, inherited `openai-codex/gpt-6-astra`, high reasoning.
+Child: `nvidia-live`, inherited `openai-codex/gpt-6-astra`, high reasoning.
 UTC transcript window: 19:39:18.942–19:42:15.696 (~177 seconds).
 No global install, additional classifier, retry, or deep-research call.
 

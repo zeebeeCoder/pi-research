@@ -1,7 +1,7 @@
 # Collect a shared real corpus for the Nvidia evaluation
 
-Repository: /home/sagent/code/opti/pi-research
-Experiment: /home/sagent/code/opti/pi-research/.artifacts/nvidia-eval-2026-11-09
+Run from the repository root; all paths below are relative to it.
+Experiment: `.artifacts/nvidia-eval-2026-11-09`
 You are only the collector. Do not synthesize a report, classify sources, edit
 code/settings, spawn agents or inspect previous experiment results.
 Read the packaged research-method skill first.
