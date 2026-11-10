@@ -45,6 +45,22 @@ export function recency(raw: string | null, since: string, until: string, asOf: 
   return out;
 }
 
+function sourceState(source: Candidate, brief: Brief, asOf: string) {
+  const u = publicUrl(source.url);
+  for (const e of source.profileEvidence ?? []) publicUrl(e.url);
+  return {
+    researchQuestion: brief.question,
+    window: { since: brief.since, until: brief.until, untilExclusive: true, asOf },
+    source: { id: source.id, title: source.title, url: source.url, host: u.hostname, text: source.text,
+      date: source.date, kind: source.kind, verified: false, truncated: source.truncated,
+      inspection: source.inspection ? { status: source.inspection.status, scope: source.inspection.scope, text: source.inspection.text, url: source.inspection.url ?? source.url } : { status: "not-inspected", scope: "unknown", text: "" },
+      profileEvidence: source.profileEvidence ?? [],
+      originNote: "Provider-reported lead. Retrieval mediation is separate from original authorship; source URL/name alone does not authenticate identity.",
+    },
+    recency: recency(source.date, brief.since, brief.until, asOf),
+  };
+}
+
 export async function prepare(brief: Brief, cwd: string) {
   const started = performance.now();
   const profile = JSON.parse(await readFile(new URL("../profiles/qualification-v3.json", import.meta.url), "utf8"));
@@ -54,21 +70,9 @@ export async function prepare(brief: Brief, cwd: string) {
   const artifactDir = join(root(cwd), batchId);
   const requests: any[] = [], unprocessed: any[] = [];
   const items = brief.sources.map((source) => {
-    const u = publicUrl(source.url);
-    for (const e of source.profileEvidence ?? []) publicUrl(e.url);
-    const metadata = recency(source.date, brief.since, brief.until, asOf);
     // Explicit projection: no local paths, collector conclusions, hidden session data or raw traces sent to Jev.
-    const state = {
-      researchQuestion: brief.question,
-      window: { since: brief.since, until: brief.until, untilExclusive: true, asOf },
-      source: { id: source.id, title: source.title, url: source.url, host: u.hostname, text: source.text,
-        date: source.date, kind: source.kind, verified: false, truncated: source.truncated,
-        inspection: source.inspection ? { status: source.inspection.status, scope: source.inspection.scope, text: source.inspection.text, url: source.inspection.url ?? source.url } : { status: "not-inspected", scope: "unknown", text: "" },
-        profileEvidence: source.profileEvidence ?? [],
-        originNote: "Provider-reported lead. Retrieval mediation is separate from original authorship; source URL/name alone does not authenticate identity.",
-      },
-      recency: metadata,
-    };
+    const state = sourceState(source, brief, asOf);
+    const metadata = state.recency;
     if (JSON.stringify(state).length > profile.policy.maxStateChars) unprocessed.push({ sourceId: source.id, reason: "State exceeds 8000 characters; retained without silent truncation or classification." });
     else for (const [pass, questions] of Object.entries(profile.passes)) requests.push({ sourceId: source.id, pass, state, questions });
     return { source, recency: metadata };
@@ -111,7 +115,27 @@ export async function review(batchId: string, responses: Response[], cwd: string
   const artifactDir = join(root(cwd), batchId);
   const batch = JSON.parse(await readFile(join(artifactDir, "prepared.json"), "utf8"));
   if (batch.batchId !== batchId || hash(batch.profile) !== batch.profileHash) throw new Error("Prepared profile identity/hash mismatch.");
-  const expected = new Set(batch.requests.map((r: any) => JSON.stringify([r.sourceId, r.pass])));
+  if (hash(batch.brief.sources) !== hash(batch.items.map((i: any) => i.source))) throw new Error("Prepared source copies disagree.");
+  const expectedRequests = new Map<string, { state: unknown; questions: unknown }>();
+  const oversized: string[] = [];
+  for (const item of batch.items) {
+    const state = sourceState(item.source, batch.brief, batch.asOf);
+    if (hash(state.recency) !== hash(item.recency)) throw new Error("Prepared recency disagrees with supplied dates.");
+    if (JSON.stringify(state).length > batch.profile.policy.maxStateChars) { oversized.push(item.source.id); continue; }
+    for (const [pass, questions] of Object.entries(batch.profile.passes)) {
+      const key = JSON.stringify([item.source.id, pass]);
+      if (expectedRequests.has(key)) throw new Error("Duplicate prepared source identity.");
+      expectedRequests.set(key, { state, questions });
+    }
+  }
+  if (hash(oversized) !== hash(batch.unprocessed.map((i: any) => i.sourceId))) throw new Error("Unprocessed source accounting mismatch.");
+  const expected = new Set<string>();
+  for (const r of batch.requests) {
+    const key = JSON.stringify([r.sourceId, r.pass]), canonical = expectedRequests.get(key);
+    if (!canonical || expected.has(key) || hash(r.questions) !== hash(canonical.questions) || hash(r.state) !== hash(canonical.state)) throw new Error("Prepared request differs from frozen source/profile.");
+    expected.add(key);
+  }
+  if (expected.size !== expectedRequests.size) throw new Error("Prepared request missing.");
   const byKey = new Map<string, Response>();
   if (!Array.isArray(responses) || responses.length > batch.profile.policy.maxCalls) throw new Error("Response count outside frozen bound.");
   for (const r of responses) {
@@ -140,8 +164,8 @@ export async function review(batchId: string, responses: Response[], cwd: string
   const result = { batchId, artifactDir, profileVersion: batch.profile.version, profileHash: batch.profileHash,
     items, rankedIds, needsContextIds,
     needsEvidenceIds: items.filter((r: any) => r.needsEvidence).map((r: any) => r.source.id),
-    materialQualificationIds: items.filter((r: any) => r.assessments.ranking.result?.answers?.qualification?.choice === "material").map((r: any) => r.source.id),
-    concernIds: items.filter((r: any) => Object.values<any>(r.assessments.provenance.result?.answers ?? {}).some(a => a.choice === "concern")).map((r: any) => r.source.id),
+    materialQualificationIds: items.filter((r: any) => r.assessments.ranking.status === "valid" && r.assessments.ranking.result?.answers?.qualification?.choice === "material").map((r: any) => r.source.id),
+    concernIds: items.filter((r: any) => r.assessments.provenance.status === "valid" && Object.values<any>(r.assessments.provenance.result?.answers ?? {}).some(a => a.choice === "concern")).map((r: any) => r.source.id),
     retained: items.length, excluded: 0, responseCount: responses.length, expectedResponses: batch.requests.length,
     interpretation: "Advisory judgments, not verified truth/identity. Unknown source evidence does not erase comparable topic scores. All source material retained; no automatic exclusion or weighted credibility score.",
   };
