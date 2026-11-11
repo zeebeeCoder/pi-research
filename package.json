@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Live research spike over existing Brave, Perplexity, Grok X and AGY scripts",
+  "engines": { "node": ">=20.3.0" },
+  "files": ["extensions/", "src/", "skills/", "profiles/", "docs/", "patches/", "tests/", "README.md"],
+  "description": "Bounded research with package-owned Brave, Perplexity, Grok X and AGY source providers",
   "keywords": [
     "pi-package"
   ],
@@ -16,7 +18,7 @@
     ]
   },
   "scripts": {
-    "test": "bun test ./tests"
+    "test": "bun test ./tests/*.test.ts && node --test tests/native/*.test.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

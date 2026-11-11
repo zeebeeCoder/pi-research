@@ -1,13 +1,12 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { access, mkdir, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { grokDiagnostics, reportedCost, scoutError } from "./diagnostics.ts";
 
-export const providers = ["brave", "perplexity", "grok", "agy"] as const;
-export type Provider = (typeof providers)[number];
-export type SearchInput = { provider: Provider; query: string; limit?: number; since?: string; until?: string };
+import { providers, sourceProviders, type Provider, type SearchInput } from "./providers/index.ts";
+export { providers };
+export type { Provider, SearchInput };
 export type Source = {
   id: string; title: string; url: string; text: string; date: string | null;
   kind: "search-result" | "model-extracted-lead"; verified: false;
@@ -21,18 +20,6 @@ export type SearchResult = {
   dateSemantics: string; error: string | null;
 };
 
-const scripts: Record<Provider, [string, string]> = {
-  brave: ["bun", "brave-search/scripts/brave-search.ts"],
-  perplexity: ["bun", "perplexity-search/scripts/pplx.ts"],
-  grok: ["node", "grok-x/scripts/grok-x.js"],
-  agy: ["node", "agy-search/scripts/agy-search.js"],
-};
-const dateSemantics: Record<Provider, string> = {
-  brave: "Brave freshness range; source.date carries page_age metadata as supplied (timezone may be absent), not an independently verified publication date.",
-  perplexity: "Date window appended to query as a hint, NOT an enforced publication-date filter.",
-  grok: "Native since-inclusive/until-exclusive filter, with wrapper filtering on Grok-extracted dates.",
-  agy: "Google after/before query hints, NOT verified publication-date filters.",
-};
 const save = (path: string, data: unknown) => writeFile(path, JSON.stringify(data, null, 2) + "\n", { mode: 0o600 });
 const object = (value: unknown): value is Record<string, any> => !!value && typeof value === "object" && !Array.isArray(value);
 const clean = (value: string) => value.replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
@@ -53,35 +40,7 @@ function validate(input: SearchInput) {
   if (input.since && input.until && input.since >= input.until) throw new Error("since must precede exclusive until.");
 }
 
-function command(input: SearchInput) {
-  const [binary, relative] = scripts[input.provider];
-  const script = join(homedir(), ".pi/agent/skills", relative);
-  let query = input.query.trim();
-  const args = [script];
-  if (input.provider === "perplexity") {
-    args.push("search");
-    if (input.since || input.until) query += ` (publication window: ${input.since ?? "any start"} inclusive to ${input.until ?? "present"} exclusive)`;
-  }
-  if (input.provider === "agy") {
-    if (input.since) query += ` after:${input.since}`;
-    if (input.until) query += ` before:${input.until}`;
-  }
-  // Each query is ONE argument. Never run through a shell or accept extra CLI flags.
-  args.push(query, "-n", String(input.limit ?? 5), "--json");
-  if (input.provider === "brave") {
-    if (input.since) args.push("--after", input.since);
-    if (input.until) args.push("--before", new Date(Date.parse(input.until) - 86400000).toISOString().slice(0, 10));
-  }
-  if (input.provider === "grok") {
-    args.push("--timeout", "90");
-    if (input.since) args.push("--since", input.since);
-    if (input.until) args.push("--until", input.until);
-  }
-  // Leave grace for the native scout to cancel and persist its own trace.
-  return { binary, script, args, timeoutMs: input.provider === "grok" ? 100_000 : 55_000 };
-}
-
-/** Captures bounded stdout/stderr; existing scout CLIs retain their own stream audits. */
+/** Captures bounded stdout/stderr; package-owned scouts retain their stream audits. */
 async function execute(binary: string, args: string[], cwd: string, timeoutMs: number, signal?: AbortSignal) {
   if (signal?.aborted) return { stdout: "", stderr: "", code: null, failure: "Cancelled before CLI launch." };
   return await new Promise<{ stdout: string; stderr: string; code: number | null; failure: string | null }>((resolveRun) => {
@@ -141,33 +100,23 @@ function braveText(value: string): string {
 // it never invokes a provider or modifies an artifact.
 export function normalize(provider: Provider, data: unknown, rawPath: string, limit: number, runId: string) {
   if (!object(data)) throw new Error("Provider JSON must be an object.");
-  let records: unknown, pointer: string;
-  if (provider === "brave") {
-    // Brave may omit web entirely on a valid empty response, but require its query envelope.
-    if (!object(data.query)) throw new Error("Missing Brave query envelope.");
-    if (data.web !== undefined && (!object(data.web) || !Array.isArray(data.web.results))) throw new Error("Malformed Brave web results.");
-    records = data.web?.results ?? []; pointer = "/web/results";
-  } else if (provider === "perplexity") { records = data.results; pointer = "/results"; }
-  else if (provider === "grok") { records = data.posts; pointer = "/posts"; }
-  else { records = data.sources; pointer = "/sources"; }
+  const unit = sourceProviders[provider];
+  const records = unit.records(data), pointer = unit.pointer;
   if (!Array.isArray(records)) throw new Error("Missing provider result array; not a successful empty search.");
-  if ((provider === "grok" || provider === "agy") && !object(data.meta)) throw new Error("Missing scout provenance metadata.");
   const sources: Source[] = records.slice(0, limit).map((item, index) => {
     if (!object(item) || typeof item.url !== "string") throw new Error("Malformed source URL.");
     const url = new URL(item.url);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || /[\x00-\x20\x7f]/.test(item.url)) {
       throw new Error("Non-HTTP, credential-bearing or control/space-containing source URL.");
     }
-    const title = provider === "grok" ? item.author ?? "Unknown X author" : item.title;
-    const text = provider === "brave" ? item.description : provider === "grok" ? item.excerpt : item.snippet;
+    const { title, text, date } = unit.fields(item);
     if (typeof title !== "string" || typeof text !== "string") throw new Error("Malformed source title/text.");
     const cleaned = Array.from(clean(provider === "brave" ? braveText(text) : text));
     const cleanedTitle = Array.from(clean(provider === "brave" ? braveText(title) : title));
-    const date = provider === "brave" ? item.page_age : item.date;
     return {
       id: `${runId}:${index + 1}`, title: cleanedTitle.slice(0, 240).join(""), url: item.url,
       text: cleaned.slice(0, 1000).join(""), date: typeof date === "string" ? date : null,
-      kind: provider === "grok" || provider === "agy" ? "model-extracted-lead" : "search-result",
+      kind: unit.kind,
       verified: false, truncated: item.truncated === true || cleaned.length > 1000 || cleanedTitle.length > 240,
       rawRef: `${rawPath}#${pointer}/${index}`,
     };
@@ -178,7 +127,8 @@ export function normalize(provider: Provider, data: unknown, rawPath: string, li
 export async function search(input: SearchInput, options: { cwd: string; signal?: AbortSignal }): Promise<SearchResult> {
   validate(input);
   if (options.signal?.aborted) throw new Error("Cancelled before invocation; no budget consumed.");
-  const cmd = command(input);
+  const unit = sourceProviders[input.provider];
+  const cmd = unit.command(input);
   const root = resolve(process.env.PI_RESEARCH_ARTIFACT_DIR || join(options.cwd, ".artifacts", "searches"));
   const runId = `${input.provider}-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   const artifactDir = join(root, runId);
@@ -187,11 +137,11 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
   const result: SearchResult = {
     provider: input.provider, query: input.query, status: "failed", sources: [], omitted: 0,
     elapsedMs: 0, artifactDir, rawPath: null, partialOutput: false,
-    usage: null, reportedCostUsd: null, providerMeta: null, dateSemantics: dateSemantics[input.provider], error: null,
+    usage: null, reportedCostUsd: null, providerMeta: null, dateSemantics: unit.dateSemantics, error: null,
   };
   await save(join(artifactDir, "request.json"), { ...input, limit: input.limit ?? 5, ...cmd, startedAt: new Date().toISOString() });
   try {
-    // Missing installations are structured failures and do not consume the allowance.
+    // Missing packaged entrypoints are structured failures and consume no allowance.
     await access(cmd.script);
     if (options.signal?.aborted) throw new Error("Cancelled before CLI launch; no budget consumed.");
     // Optional persistent per-experiment allowance. Atomic claim prevents races/reloads

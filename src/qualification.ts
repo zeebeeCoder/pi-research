@@ -45,10 +45,15 @@ export function recency(raw: string | null, since: string, until: string, asOf: 
   return out;
 }
 
-function sourceState(source: Candidate, brief: Brief, asOf: string) {
-  const u = publicUrl(source.url);
+export function validatePublicReferences(source: Candidate) {
+  const url = publicUrl(source.url);
   for (const e of source.profileEvidence ?? []) publicUrl(e.url);
   if (source.inspection?.url !== undefined) publicUrl(source.inspection.url);
+  return url;
+}
+
+function sourceState(source: Candidate, brief: Brief, asOf: string) {
+  const u = validatePublicReferences(source);
   return {
     researchQuestion: brief.question,
     window: { since: brief.since, until: brief.until, untilExclusive: true, asOf },
@@ -62,13 +67,13 @@ function sourceState(source: Candidate, brief: Brief, asOf: string) {
   };
 }
 
-export async function prepare(brief: Brief, cwd: string) {
+export async function prepare(brief: Brief, cwd: string, options: { artifactRoot?: string } = {}) {
   const started = performance.now();
   const profile = JSON.parse(await readFile(new URL("../profiles/qualification-v3.json", import.meta.url), "utf8"));
   if (!brief.question?.trim() || brief.question.length > 1800 || !realDay(brief.since) || !realDay(brief.until) || brief.since >= brief.until) throw new Error("Supply a question and real ordered UTC calendar bounds.");
   if (!Array.isArray(brief.sources) || brief.sources.length < 1 || brief.sources.length > profile.policy.maxSources || new Set(brief.sources.map(s => s.id)).size !== brief.sources.length) throw new Error("Expected 1–15 unique source records.");
   const batchId = randomUUID(), asOf = new Date().toISOString();
-  const artifactDir = join(root(cwd), batchId);
+  const artifactDir = join(options.artifactRoot ?? root(cwd), batchId);
   const requests: any[] = [], unprocessed: any[] = [];
   const items = brief.sources.map((source) => {
     // Explicit projection: no local paths, collector conclusions, hidden session data or raw traces sent to Jev.
@@ -111,9 +116,9 @@ export function validateAnswers(result: any, questions: any): string[] {
 }
 
 /** Re-usable verification over saved real responses; never invokes a model. */
-export async function review(batchId: string, responses: Response[], cwd: string) {
+export async function review(batchId: string, responses: Response[], cwd: string, options: { artifactRoot?: string } = {}) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(batchId)) throw new Error("Invalid batch ID.");
-  const artifactDir = join(root(cwd), batchId);
+  const artifactDir = join(options.artifactRoot ?? root(cwd), batchId);
   const batch = JSON.parse(await readFile(join(artifactDir, "prepared.json"), "utf8"));
   if (batch.batchId !== batchId || hash(batch.profile) !== batch.profileHash) throw new Error("Prepared profile identity/hash mismatch.");
   if (hash(batch.brief.sources) !== hash(batch.items.map((i: any) => i.source))) throw new Error("Prepared source copies disagree.");

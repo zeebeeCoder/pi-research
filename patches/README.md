@@ -1,4 +1,8 @@
-# Machine-local upstream patches
+# Historical machine-local upstream patches
+
+The Grok scout is now bundled in `src/providers/grok/scout.mjs`, including this
+repair. No external skill patch or installation is required. The notes below
+record the original spike; do not reapply this patch to the bundled implementation.
 
 `grok-x-structured-output.patch` is applied to the existing shared skill at
 `~/.pi/agent/skills/grok-x` (which may be a symlink).
