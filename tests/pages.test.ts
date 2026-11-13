@@ -39,7 +39,7 @@ describe("optional page reading without changing discovery", () => {
       cwd, signal, exec: async (...args) => { calls.push(args); return { stdout: jsonl(receipt(b, "B"), receipt(a, "A")), stderr: "", code: 0 }; },
     });
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual(["/trusted/sc", ["control", "capture", "--no-auto-start", "--raw", "--format", "text", "--timeout", "120000", "--socket", "/private/service.sock", "--", a, b], { cwd, signal, timeout: pageLimits.timeoutMs, maxBuffer: pageLimits.maxBuffer }]);
+    expect(calls[0]).toEqual(["/trusted/sc", ["control", "capture", "--raw", "--format", "text", "--timeout", "120000", "--socket", "/private/service.sock", "--", a, b], { cwd, signal, timeout: pageLimits.timeoutMs, maxBuffer: pageLimits.maxBuffer }]);
     expect(result.status).toBe("completed");
     expect(result.records.map(r => [r.sourceId, r.excerpt])).toEqual([["source-a", "A"], ["source-b", "B"]]);
     expect(result.records[0].receiptRef).toEndWith("receipts.jsonl#L2");
@@ -83,12 +83,13 @@ describe("optional page reading without changing discovery", () => {
     expect(result.records[0].finalUrl).toBe(b);
   });
 
-  test("missing service and missing CLI are durable explicit failures, never retried", async () => {
-    for (const exec of [fake("", { code: 1, stderr: "connect ENOENT service.sock" }), (async () => { throw new Error("spawn sc ENOENT"); }) as Exec]) {
+  test("failed SC acquisition and missing CLI are durable explicit failures, never retried", async () => {
+    for (const exec of [fake("", { code: 1, stderr: "CONTROL_SERVICE_UNAVAILABLE: acquisition deadline exceeded" }), (async () => { throw new Error("spawn sc ENOENT"); }) as Exec]) {
       let calls = 0;
       const result = await readPages({ pages: [{ url: a }] }, { cwd, exec: async (...args) => { calls++; return exec(...args); } });
       expect(calls).toBe(1); expect(result.status).toBe("failed");
       expect(result.transport.error).toBeTruthy();
+      expect(result.transport.error).not.toContain("No service was started");
       expect(result.records[0].error).toContain("No receipt");
       expect(result.records[0].excerpt).toBe("");
       expect(result.records[0].contentPath).toBeNull();

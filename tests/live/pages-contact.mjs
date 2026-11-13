@@ -1,5 +1,5 @@
 // Opt-in contact with the installed Pi loader/executor. No model calls.
-// --offline uses a fake SC executable; --live URL... uses the existing SC service.
+// --offline uses a fake SC executable; --live URL... allows SC coordinated on-demand service acquisition.
 import assert from "node:assert/strict";
 import { chmod, mkdtemp, readFile, access, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -80,7 +80,7 @@ process.exitCode=1;
     assert.equal(output.records[1].error, "ACCESS_CHALLENGE");
     const calls = (await readFile(join(cwd, "calls.jsonl"), "utf8")).trim().split("\n").map(line => JSON.parse(line));
     assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0], ["control", "capture", "--no-auto-start", "--raw", "--format", "text", "--timeout", "120000", "--", "https://example.org/a", "https://example.org/b"]);
+    assert.deepEqual(calls[0], ["control", "capture", "--raw", "--format", "text", "--timeout", "120000", "--", "https://example.org/a", "https://example.org/b"]);
     console.log(JSON.stringify({ mode, registered: tools.length, discoveryPageCalls: 0, pageCalls: 1, schemas: "valid", partialResult: "preserved" }));
   } else {
     console.log(JSON.stringify(output, null, 2));

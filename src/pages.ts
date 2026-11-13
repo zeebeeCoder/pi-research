@@ -77,7 +77,7 @@ export function decodeReceipts(stdout: string, pages: PageTarget[]) {
   return { receipts, duplicates, issues };
 }
 
-/** One SC caller batch, no service startup, retries, classifier or discovery writes.
+/** One SC caller batch; SC owns coordinated acquisition/startup, never batch replay.
  * SC owns background tabs; disconnect requests cleanup, not proof of cleanup.
  */
 export async function readPages(input: ReadPagesInput, options: { cwd: string; signal?: AbortSignal; exec: Exec }): Promise<PagesResult> {
@@ -91,7 +91,7 @@ export async function readPages(input: ReadPagesInput, options: { cwd: string; s
   const startedAt = new Date().toISOString(), started = performance.now();
   const binary = process.env.PI_RESEARCH_SC_BIN || "sc";
   // Text retains Markdown links. JSONL is the outer receipt format, not page text.
-  const args = ["control", "capture", "--no-auto-start", "--raw", "--format", "text", "--timeout", "120000"];
+  const args = ["control", "capture", "--raw", "--format", "text", "--timeout", "120000"];
   if (process.env.PI_RESEARCH_SC_SOCKET) args.push("--socket", process.env.PI_RESEARCH_SC_SOCKET);
   args.push("--", ...input.pages.map(p => p.url));
   await save(join(artifactDir, "request.json"), { ...input, startedAt, binary, args });
@@ -105,7 +105,7 @@ export async function readPages(input: ReadPagesInput, options: { cwd: string; s
   await writeFile(join(artifactDir, "receipts.jsonl"), run.stdout, { mode: 0o600, flag: "wx" });
   await writeFile(join(artifactDir, "stderr.log"), run.stderr, { mode: 0o600, flag: "wx" });
   if (run.killed || run.truncated) transportError ??= "SC caller stopped (cancellation, deadline or output limit); outstanding cleanup is unconfirmed. No automatic retry.";
-  if (run.code !== 0) transportError ??= `SC exited ${run.code ?? "without a code"}: ${clip(run.stderr.trim(), 240) || "no stderr diagnostic"}. Inspect receipts/stderr.log; check the existing sc control service. No service was started or replaced.`;
+  if (run.code !== 0) transportError ??= `SC exited ${run.code ?? "without a code"}: ${clip(run.stderr.trim(), 240) || "no stderr diagnostic"}. Inspect receipts/stderr.log for SC acquisition/capture diagnostics; service startup and cleanup cannot be inferred from this exit. No batch retry was attempted.`;
   const decoded = decodeReceipts(run.stdout, input.pages);
   const records: PageRecord[] = [];
   for (const [index, target] of input.pages.entries()) {

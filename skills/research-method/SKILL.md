@@ -155,10 +155,13 @@ Python/curl scrapers, crawl sites or invoke a browser without approval.
   Supply `reductionId` and per-page `sourceId` when available; the tool checks these
   against saved URLs. Omit the reduction ID for user-supplied links or search-only
   work. Do not read clipped URLs.
-- `research_read_pages` uses installed SC's existing shared Chrome snapshot service
-  and owned background tabs. It does not read the user's active-tab state. If SC or
-  the service is unavailable, report the limitation; never start/replace the service,
-  invent a scraper, or retry the batch automatically. For separately requested
+- `research_read_pages` uses installed SC's shared on-demand Chrome snapshot service
+  and owned background tabs. SC owns coordinated startup/reuse, guarded recovery of
+  dead-owned sockets and idle shutdown; agents own only their caller sessions and
+  receipts. It does not read the user's active-tab state. Never manually run `serve`,
+  kill services, delete sockets or replace live services. If acquisition or capture
+  fails, report the limitation; do not invent a scraper or replay the batch.
+  For separately requested
   interactive browser work, load **browser-tools** or use an approved browser agent.
 - Inspect each page's status, readiness warnings, cleanup errors and transport
   diagnostics. Partial batches retain successful pages. Stable/nonempty does not
