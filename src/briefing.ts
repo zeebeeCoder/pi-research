@@ -84,7 +84,7 @@ export function compactReduction(result: any) {
       diagnostics: d ? { schemaWarning: clipped(d.schemaWarning, 160), diagnosticError: clipped(d.diagnosticError, 160) } : null };
   });
   const summary = {
-    reductionId: result.reductionId, status: result.status, replayed: result.replayed,
+    kind: "leads" as const, reductionId: result.reductionId, status: result.status, replayed: result.replayed,
     evidenceStage: "discovery" as const, retained: result.retained, excluded: result.excluded,
     queue, queueTotal: rows.length, nextOffset: rows.length > queue.length ? queue.length : null,
     signals, coverage: { providers: [...new Set(searches.map((s: any) => s.provider).filter(Boolean))],
@@ -138,7 +138,7 @@ export async function getSources(request: SourceRequest, cwd: string, signal?: A
     rawRef: clipped(item.source.rawRef, 2048),
     evidenceStage: "discovery", // never claim that later inspection updated this snapshot
   }));
-  return bounded({ reductionId: request.reductionId, resultPath, records, total: items.length,
+  return bounded({ kind: "leads" as const, reductionId: request.reductionId, resultPath, records, total: items.length,
     nextOffset: request.ids || offset + selected.length >= items.length ? null : offset + selected.length,
     interpretation: "Saved discovery snippets only. No original-page inspection or classifier distributions. Truncated URLs must be retrieved from the artifact before navigation. Later inspected evidence belongs in a separate source-linked register." });
 }

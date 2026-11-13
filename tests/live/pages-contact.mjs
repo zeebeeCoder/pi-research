@@ -41,25 +41,30 @@ process.exitCode=1;
   const loaded = await loadExtensions([join(repo, "extensions/research.ts")], cwd);
   assert.deepEqual(loaded.errors, []);
   const tools = loaded.extensions.flatMap(e => [...e.tools.values()].map(t => t.definition));
-  assert.deepEqual(tools.map(t => t.name).sort(), ["research_search", "research_reduce", "research_sources", "research_prepare", "research_review", "research_read_pages"].sort());
+  assert.deepEqual(tools.map(t => t.name).sort(), ["research_search", "research_route", "research_reduce", "research_sources", "research_prepare", "research_review", "research_read_pages", "market_research"].sort());
   const tool = tools.find(t => t.name === "research_read_pages");
   const ctx = { cwd, modelRegistry: new Proxy({}, { get() { throw Error("No classifier/model access allowed in this contact"); } }) };
+  let classifierStubs = 0, leadOutcome, discoveryCtx;
   if (offline) {
-    let classifierStubs = 0;
-    const discoveryCtx = { cwd, modelRegistry: {
+    discoveryCtx = { cwd, modelRegistry: {
       getAvailableOfType: async () => [{ provider: "typesafe", id: "jev-latest" }],
-      classify: async () => { classifierStubs++; return { provider: "typesafe", model: "jev-latest", stopReason: "error", errorMessage: "Offline stub: no provider call" }; },
+      classify: async (_model, request) => { assert.ok(!JSON.stringify(request).includes("Fixture article text")); classifierStubs++; return { provider: "typesafe", model: "jev-latest", stopReason: "error", errorMessage: "Offline stub: no provider call" }; },
     } };
     const lead = { id: "fixture-source", title: "Fixture lead", url: "https://example.org/a", text: "Fixture snippet", date: null, kind: "search-result", verified: false, truncated: false, rawRef: "fixture.json" };
+    leadOutcome = { status: "fulfilled", value: {
+      kind: "leads", provider: "brave", query: "fixture", status: "completed", sources: [lead], omitted: 0, elapsedMs: 0,
+      artifactDir: cwd, rawPath: null, partialOutput: false, usage: null, reportedCostUsd: null,
+      providerMeta: null, dateSemantics: "synthetic", error: null,
+    } };
     const reduction = await tools.find(t => t.name === "research_reduce").execute("discovery", {
-      question: "Offline spine check", since: "2026-11-01", until: "2026-11-12", outcomes: [{ status: "fulfilled", value: {
-        provider: "brave", query: "fixture", status: "completed", sources: [lead], omitted: 0, elapsedMs: 0,
-        artifactDir: cwd, rawPath: null, partialOutput: false, usage: null, reportedCostUsd: null,
-        providerMeta: null, dateSemantics: "synthetic", error: null,
-      } }],
+      question: "Offline spine check", since: "2026-11-01", until: "2026-11-12", outcomes: [leadOutcome],
     }, undefined, undefined, discoveryCtx);
+    assert.equal(reduction.structuredContent.kind, "leads");
+    assert.equal(compile(tools.find(t => t.name === "research_reduce").outputSchema).check(reduction.structuredContent), true);
     assert.equal(classifierStubs, 2);
     const sources = await tools.find(t => t.name === "research_sources").execute("snippets", { reductionId: reduction.structuredContent.reductionId }, undefined, undefined, ctx);
+    assert.equal(sources.structuredContent.kind, "leads");
+    assert.equal(compile(tools.find(t => t.name === "research_sources").outputSchema).check(sources.structuredContent), true);
     assert.equal(sources.structuredContent.records[0].excerpt, "Fixture snippet");
     await assert.rejects(access(join(cwd, "calls.jsonl"))); // registration/discovery did not launch SC
   }
@@ -74,6 +79,7 @@ process.exitCode=1;
   assert.deepEqual(result.details, output);
   assert.ok(JSON.stringify(output).length <= 24_000);
   if (offline) {
+    assert.equal(output.kind, "evidence");
     assert.equal(output.status, "partial");
     assert.equal(result.isError, false);
     assert.equal(output.records[0].excerpt, "Fixture article text");
@@ -81,7 +87,28 @@ process.exitCode=1;
     const calls = (await readFile(join(cwd, "calls.jsonl"), "utf8")).trim().split("\n").map(line => JSON.parse(line));
     assert.equal(calls.length, 1);
     assert.deepEqual(calls[0], ["control", "capture", "--raw", "--format", "text", "--timeout", "120000", "--", "https://example.org/a", "https://example.org/b"]);
-    console.log(JSON.stringify({ mode, registered: tools.length, discoveryPageCalls: 0, pageCalls: 1, schemas: "valid", partialResult: "preserved" }));
+    const routeTool = tools.find(t => t.name === "research_route");
+    assert.equal(routeTool.exposure, "codemode");
+    const outcomes = [leadOutcome, { status: "fulfilled", value: output }, { status: "rejected", reason: "Synthetic unassigned acquisition failure" }];
+    const before = JSON.stringify(outcomes);
+    assert.equal(compile(routeTool.parameters).check({ outcomes }), true);
+    const routed = await routeTool.execute("route", { outcomes }, undefined, undefined, ctx);
+    assert.equal(compile(routeTool.outputSchema).check(routed.structuredContent), true);
+    assert.deepEqual(routed.structuredContent, { leads: [0], evidence: [1], rejected: [2] });
+    assert.equal(JSON.stringify(outcomes), before);
+    const reduceTool = tools.find(t => t.name === "research_reduce");
+    const mixedBrief = { question: "Mixed results contact", since: "2026-11-01", until: "2026-11-12", outcomes };
+    assert.equal(compile(reduceTool.parameters).check(mixedBrief), false);
+    await assert.rejects(reduceTool.execute("reject-evidence", mixedBrief, undefined, undefined, discoveryCtx), /leads only/);
+    assert.equal(classifierStubs, 2); // rejection happened before model access
+    const leadsOnly = { ...mixedBrief, outcomes: routed.structuredContent.leads.map(i => outcomes[i]) };
+    assert.equal(compile(reduceTool.parameters).check(leadsOnly), true);
+    await reduceTool.execute("qualify-leads", leadsOnly, undefined, undefined, discoveryCtx);
+    assert.equal(classifierStubs, 4); // two passes for one lead, none for evidence
+    await reduceTool.execute("replay", leadsOnly, undefined, undefined, discoveryCtx);
+    assert.equal(classifierStubs, 4);
+    assert.equal(output.records[1].error, "ACCESS_CHALLENGE");
+    console.log(JSON.stringify({ mode, registered: tools.length, discoveryPageCalls: 0, pageCalls: 1, schemas: "valid", partialResult: "preserved", routing: routed.structuredContent, mixedClassifierCalls: 2, evidenceClassifierCalls: 0, replayClassifierCalls: 0 }));
   } else {
     console.log(JSON.stringify(output, null, 2));
     if (output.status !== "completed") process.exitCode = 1; // warnings/failures are visible, never retried

@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { collectSources, reduce, type ReduceInput } from "../src/reduce.ts";
 import type { SearchResult, Source } from "../src/search.ts";
 
 const source = (n: number): Source => ({ id: `s${n}`, title: `Source ${n}`, url: `https://example.org/${n}`, text: "Public source text", date: "2026-11-09", kind: "search-result", verified: false, truncated: false, rawRef: `/private/search/raw.json#/${n}` });
-const search = (sources: Source[], changes: Partial<SearchResult> = {}): SearchResult => ({ provider: "brave", query: "example", status: sources.length ? "completed" : "empty", sources, omitted: 0, elapsedMs: 1, artifactDir: "/private/search", rawPath: "/private/search/raw.json", partialOutput: false, usage: null, reportedCostUsd: null, providerMeta: { integrationDiagnostics: { schemaWarning: "synthetic warning" } }, dateSemantics: "unverified", error: null, ...changes });
+const search = (sources: Source[], changes: Partial<SearchResult> = {}): SearchResult => ({ kind: "leads", provider: "brave", query: "example", status: sources.length ? "completed" : "empty", sources, omitted: 0, elapsedMs: 1, artifactDir: "/private/search", rawPath: "/private/search/raw.json", partialOutput: false, usage: null, reportedCostUsd: null, providerMeta: { integrationDiagnostics: { schemaWarning: "synthetic warning" } }, dateSemantics: "unverified", error: null, ...changes });
 const input = (n = 1): ReduceInput => ({ question: "What changed?", since: "2026-11-04", until: "2026-11-11", outcomes: [{ status: "fulfilled", value: search(Array.from({ length: n }, (_, i) => source(i))) }] });
 const answer = ({ state, questions }: any) => ({
   provider: "typesafe", model: "jev-latest", stopReason: "stop",
@@ -63,6 +64,32 @@ describe("offline collect/classify/review composition", () => {
     const second = await reduce(input(), { cwd, classifier: async () => { throw new Error("must not resolve"); } });
     expect(second.replayed).toBe(true); expect(second.reductionId).toBe(first.reductionId); expect(calls).toBe(2);
     expect(await readFile(first.resultPath, "utf8")).toBe(bytes);
+  });
+
+  test("routing tag preserves pre-tag replay and interrupted-claim identity", async () => {
+    const brief = input();
+    const first = await reduce(brief, { cwd, classifier: async () => async r => answer(r) });
+    const legacyOutcomes = first.searchOutcomes.map(o => {
+      if (o.status === "rejected") return o;
+      const { kind, ...result } = o.result;
+      return { ...o, result };
+    });
+    const legacyId = createHash("sha256").update(JSON.stringify({
+      version: 1,
+      input: { question: brief.question, since: brief.since, until: brief.until, outcomes: legacyOutcomes },
+      profileHash: first.profileHash,
+    })).digest("hex");
+    expect(first.reductionId).toBe(legacyId);
+    const legacy = { ...first, searchOutcomes: legacyOutcomes };
+    await writeFile(first.resultPath, JSON.stringify(legacy));
+    const bytes = await readFile(first.resultPath, "utf8");
+    const options = { cwd, classifier: async () => { throw new Error("must not resolve for legacy evidence"); } };
+    const replay = await reduce(brief, options);
+    expect(replay.replayed).toBe(true);
+    expect(replay.searchOutcomes).toEqual(legacyOutcomes);
+    expect(await readFile(first.resultPath, "utf8")).toBe(bytes);
+    await rm(first.resultPath);
+    await expect(reduce(brief, options)).rejects.toThrow(/no automatic rerun/);
   });
 
   test("concurrent duplicate execution is claimed once", async () => {

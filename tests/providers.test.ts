@@ -129,6 +129,7 @@ describe("packaged source orchestration", () => {
     test(`${provider}: wrapper → packaged adapter → normalized lead → durable artifacts`, async () => {
       const result = await search({ provider, query, limit: 1 }, { cwd });
       expect(result.status).toBe("completed");
+      expect(result.kind).toBe("leads");
       expect(result.sources).toHaveLength(1);
       expect(result.sources[0].verified).toBe(false);
       expect(result.sources[0].rawRef).toContain(result.rawPath!);
@@ -142,6 +143,7 @@ describe("packaged source orchestration", () => {
       expect(request).not.toContain(".pi/agent/skills");
       const repeat = await search({ provider, query, limit: 1 }, { cwd });
       expect(repeat.status).toBe("failed");
+      expect(repeat.kind).toBe("leads");
       expect(repeat.error).toContain("allowance already consumed");
       expect((await readdir(repeat.artifactDir)).sort()).toEqual(["request.json", "result.json"]);
     });
@@ -154,6 +156,7 @@ describe("packaged source orchestration", () => {
       process.env.FAKE_AGY_MODE = "empty";
       const result = await search({ provider, query }, { cwd });
       expect(result.status).toBe("empty");
+      expect(result.kind).toBe("leads");
       expect(result.sources).toEqual([]);
       expect(result.rawPath).not.toBeNull();
     });

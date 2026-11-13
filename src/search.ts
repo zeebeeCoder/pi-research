@@ -13,6 +13,7 @@ export type Source = {
   truncated: boolean; rawRef: string;
 };
 export type SearchResult = {
+  kind: "leads";
   provider: Provider; query: string; status: "completed" | "empty" | "failed";
   sources: Source[]; omitted: number; elapsedMs: number;
   artifactDir: string; rawPath: string | null; partialOutput: boolean;
@@ -135,7 +136,7 @@ export async function search(input: SearchInput, options: { cwd: string; signal?
   await mkdir(artifactDir, { recursive: true, mode: 0o700 });
   const started = performance.now();
   const result: SearchResult = {
-    provider: input.provider, query: input.query, status: "failed", sources: [], omitted: 0,
+    kind: "leads", provider: input.provider, query: input.query, status: "failed", sources: [], omitted: 0,
     elapsedMs: 0, artifactDir, rawPath: null, partialOutput: false,
     usage: null, reportedCostUsd: null, providerMeta: null, dateSemantics: unit.dateSemantics, error: null,
   };

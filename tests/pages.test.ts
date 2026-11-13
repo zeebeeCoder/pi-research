@@ -41,6 +41,7 @@ describe("optional page reading without changing discovery", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual(["/trusted/sc", ["control", "capture", "--raw", "--format", "text", "--timeout", "120000", "--socket", "/private/service.sock", "--", a, b], { cwd, signal, timeout: pageLimits.timeoutMs, maxBuffer: pageLimits.maxBuffer }]);
     expect(result.status).toBe("completed");
+    expect(result.kind).toBe("evidence");
     expect(result.records.map(r => [r.sourceId, r.excerpt])).toEqual([["source-a", "A"], ["source-b", "B"]]);
     expect(result.records[0].receiptRef).toEndWith("receipts.jsonl#L2");
     expect(await readFile(result.records[0].contentPath!, "utf8")).toBe("A");
@@ -54,6 +55,7 @@ describe("optional page reading without changing discovery", () => {
     const raw = jsonl(failed, receipt());
     const result = await readPages({ pages: [{ url: a }, { url: b }] }, { cwd, exec: fake(raw, { code: 1, stderr: "diagnostic" }) });
     expect(result.status).toBe("partial");
+    expect(result.kind).toBe("evidence");
     expect(result.records[0].status).toBe("completed");
     expect(result.records[1].error).toBe("ACCESS_CHALLENGE");
     expect(result.records[1].contentPath).toBeNull();

@@ -1,5 +1,8 @@
 import { fileURLToPath } from "node:url";
 
+// Discovery and market acquisition have separate input/output contracts.
+// Keep the search provider union stable; Yahoo is evidence, not a URL/snippet lead.
+export { marketProviders } from "./market.mjs";
 export const providers = ["brave", "perplexity", "grok", "agy"] as const;
 export type Provider = (typeof providers)[number];
 export type SearchInput = { provider: Provider; query: string; limit?: number; since?: string; until?: string };

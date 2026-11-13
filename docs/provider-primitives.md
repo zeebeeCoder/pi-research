@@ -1,9 +1,28 @@
-# Source-provider primitives
+# Provider primitives
 
-`src/providers/index.ts` is the registry of four `SourceProvider` units. These
-are source adapters, not chat-model providers registered with Pi. A caller uses
-`research_search`; it never needs a skill-installed script or provider-specific
-command construction.
+`src/providers/index.ts` exposes two operation-specific registries inside this
+one Pi package: four discovery `sourceProviders` and Yahoo `marketProviders`.
+These are data/source adapters, not chat-model providers registered with Pi.
+`research_search` retains its query → URL/snippet leads contract;
+`market_research` accepts exact ticker/currency pairs and produces evidence.
+Neither caller needs skill-installed scripts or provider command construction.
+
+## Market acquisition
+
+`src/providers/market.mjs` registers the Yahoo adapter in `yahoo/index.mjs`.
+It resolves installed ticker-cli on demand, makes one bounded invocation,
+preserves raw output/receipts and validates returned histories. It contains no
+indicator, chart or classification logic. `src/market/` owns indicator computation,
+charting and bounded evidence output; the existing research extension registers
+its tool. No second package, install, registry framework or runtime dependency on
+the retired sibling is needed.
+
+Market evidence never enters `research_search` or `research_reduce`. Search
+provider IDs stay unchanged; `research_route` handles both result kinds. Native
+Yahoo session/consent/retry behavior must be authorized even though our wrapper
+never retries. See [market contracts, formulas and limits](market.md).
+
+The remaining sections describe the discovery-provider contract.
 
 ## Ownership and composition
 
@@ -37,7 +56,10 @@ see the [research-method skill](../skills/research-method/SKILL.md).
 **Input:** one provider, printable query (1–1800 chars, no leading flag), limit
 1–5, optional real UTC day bounds with exclusive `until`.
 
-**Output:** unchanged `SearchResult` / `Source` tool schema. Every accepted source
+**Output:** `SearchResult` now adds the operation-owned `kind: "leads"`; the
+`Source` schema and other search fields are unchanged. This top-level routing
+category is separate from each source's evidence kind. See [result kinds](result-kinds.md).
+Every accepted source
 has an ID, raw JSON pointer, bounded title/text, credential-free HTTP(S) URL,
 provider date when supplied, evidence kind, `verified: false`, and truncation
 status. Raw content remains in private artifacts. Normalized leads are not proof

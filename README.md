@@ -1,12 +1,61 @@
 # pi-research
 
-Source discovery and static-template qualification for Pi. Compose parallel
+Source discovery, qualification and market evidence in one Pi extension. Compose parallel
 `research_search` calls with `research_reduce` in one Codemode script. Package-owned
 Brave, Perplexity, Grok X and AGY providers return normalized leads; the reducer
 collects them, runs Jev through Pi, and validates a lossless ranked view. No external
 skill scripts, separate classifier SDK, evidence database or automatic deep research.
 When snippets aren't enough, `research_read_pages` reads selected links through
 SC's shared Chrome service—only in the existing requested/approved depth step.
+`market_research` uses the package-owned Yahoo provider for daily price history,
+indicators and charts. It needs no separate extension or package installation.
+
+## Result-kind spike: leads and evidence
+
+Acquisition operations now declare a fixed top-level `kind`: search returns
+`leads`; page capture and market acquisition return `evidence` (material obtained,
+not verified fact).
+Normal discovery still runs **search → reduce/qualify → snippets → brief**.
+
+For mixed acquisition batches, the local Codemode tool `research_route` returns
+original indices in `leads`, `evidence`, and `rejected` buckets. Send only the
+leads outcomes to `research_reduce`; retain evidence and rejections separately.
+The reducer independently rejects evidence before classifier access. No domain
+payload hierarchy, provider-based routing or skip-classification flag is introduced. [Contract, composition example and offline contact](docs/result-kinds.md).
+
+Reload Pi for the new schemas/tool. Untagged acquisition inputs fail closed;
+existing saved reductions remain readable and the added tag does not change
+their replay/claim identity.
+
+## Market research
+
+The existing extension also registers `market_research`. Yahoo acquisition lives
+under `src/providers/yahoo/`, exposed through `marketProviders` in the provider
+entrypoint. `src/market/` owns indicators, charts and the tool contract. Discovery
+providers keep their existing search inputs and lead outputs.
+
+After authorizing acquisition, request 1–4 exact Yahoo tickers and currencies:
+
+```js
+const r = await tools.market_research({
+  instruments: [{symbol: "ASML.AS", currency: "EUR"}]
+});
+text(r); // bounded summary, statuses, provenance and quality warnings
+if (r.records[0].chartPath) image(await tools.read({path: r.records[0].chartPath}));
+```
+
+Fixed one-year daily history, SMA20/50/200, RSI, ATR, MACD, Bollinger and volume
+measures; four-panel PNGs show the latest 120 observations. Evidence skips lead
+qualification, not quality checks. Charts require explicit image inspection.
+
+**Native behavior caveat:** ticker-cli may initialize/refresh a Yahoo session,
+POST EU consent and internally retry. Obtain authorization covering those effects;
+our wrapper never retries or falls back. Adjustment, bar completion and upstream
+accuracy remain unverified. No automatic recommendations or trading.
+
+See [market contract, formulas, limitations and tests](docs/market.md).
+An existing local pi-research installation picks up this tool with `/reload` or
+a restart. No second installation is needed; the former sibling is retired.
 
 ## Workflow at a glance
 
@@ -76,9 +125,10 @@ from an installed skill or the caller's working directory.
 | Perplexity | Packaged HTTP search adapter | `PERPLEXITY_API_KEY`, with existing `~/.config/perplexity/.env` fallback |
 | Grok | Packaged audited scout → native `grok` executable | Existing Grok login; `GROK_X_BIN` may override the executable |
 | AGY | Packaged audited scout → native `agy` executable | Existing AGY authentication; `AGY_SEARCH_BIN` may override the executable |
+| Yahoo market evidence | Packaged history adapter → native `ticker-cli` | Installed ticker-cli; approved native session/consent/retry behavior |
 
 Integration code and orchestration are self-contained; provider services and the
-two authenticated native executables remain external transports. No credential
+native executables remain external transports. No credential
 files are bundled or migrated. Only the selected provider needs to be configured.
 See [source-provider primitive contracts](docs/provider-primitives.md).
 
@@ -99,6 +149,9 @@ inputs are not live-provider compatibility or research-quality evidence. Live
 extension loading is a separate smoke check. Page-reading tests cover mixed and
 out-of-order receipts, missing service, cancellation, malformed/duplicate receipts,
 redirects, output bounds, warnings, and immutable discovery links.
+Market tests cover validation, formulas, warm-up, cancellation, partial failures,
+raw lineage and PNG decoding. A frozen prior live capture checks identical
+indicator summaries, full-series hashes and PNG hashes without any fresh fetch.
 
 Optional contact through your **installed Pi loader and executor**, without model
 calls (set the path to your own installed package):
@@ -106,6 +159,7 @@ calls (set the path to your own installed package):
 ```sh
 export PI_RESEARCH_PI_PACKAGE=/path/to/node_modules/@earendil-works/pi-coding-agent
 node tests/live/pages-contact.mjs --offline
+npm run test:market-contact # one package, eight tools, schemas + direct/Codemode images
 # With compatible SC and connected Chrome; allows on-demand startup and reads only these URLs:
 node tests/live/pages-contact.mjs --live 'https://example.org/' 'https://news.ycombinator.com/'
 ```

@@ -16,6 +16,7 @@ export type PageRecord = {
   excerpt: string; excerptTruncated: boolean; contentChars: number;
 };
 export type PagesResult = {
+  kind: "evidence";
   captureId: string; artifactDir: string; resultPath: string; reductionId: string | null;
   startedAt: string; finishedAt: string; elapsedMs: number;
   status: "completed" | "partial" | "failed"; evidenceStage: "inspection";
@@ -159,7 +160,7 @@ export async function readPages(input: ReadPagesInput, options: { cwd: string; s
   ];
   const clean = complete === records.length && !transportError && !decoded.issues.length && records.every(r => !r.cleanupError && r.stable && !r.warnings.length && !r.warningsOmitted);
   const result: PagesResult = {
-    captureId, artifactDir, resultPath, reductionId: input.reductionId ?? null, startedAt, finishedAt,
+    kind: "evidence", captureId, artifactDir, resultPath, reductionId: input.reductionId ?? null, startedAt, finishedAt,
     elapsedMs: Math.round(performance.now() - started), status: clean ? "completed" : complete ? "partial" : "failed",
     evidenceStage: "inspection", records,
     transport: { code: run.code, killed: !!run.killed, truncated: !!run.truncated, error: transportError }, warnings,

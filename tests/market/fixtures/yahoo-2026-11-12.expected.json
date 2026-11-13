@@ -1,0 +1,296 @@
+{
+  "origin": "One approved live batch on 2026-11-12; saved output, not fresh market data or a new allowance",
+  "acquiredAt": "2026-11-12T20:16:09.116Z",
+  "rawSha256": "abe9d65bfd4a5003851c25defa11fa1af851e3fd1eebd54b3a26f5ca3e813f24",
+  "records": [
+    {
+      "requested": {
+        "symbol": "ASML.AS",
+        "currency": "EUR"
+      },
+      "identity": {
+        "symbol": "ASML.AS",
+        "name": "ASML HOLDING",
+        "currency": "EUR",
+        "exchange": null,
+        "isin": null,
+        "verified": false
+      },
+      "barCount": 256,
+      "firstBarDate": "2025-11-12",
+      "lastBarDate": "2026-11-12",
+      "lastClose": 1376.8,
+      "quality": [
+        "Adjustment and latest-bar completion unknown; all validated bars included.",
+        "Latest bar has acquisition UTC date and may still be forming.",
+        "2 gaps exceed 4 calendar days; holidays versus missing sessions unresolved."
+      ],
+      "formulaVersion": "pi-market-indicators.v1",
+      "indicators": {
+        "sma20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 256,
+          "formula": "arithmetic mean of last 20 closes",
+          "values": {
+            "value": 1410.2999999999997
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "sma50": {
+          "status": "complete",
+          "warmupBars": 50,
+          "observedBars": 256,
+          "formula": "arithmetic mean of last 50 closes",
+          "values": {
+            "value": 1477.9400000000003
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "sma200": {
+          "status": "complete",
+          "warmupBars": 200,
+          "observedBars": 256,
+          "formula": "arithmetic mean of last 200 closes",
+          "values": {
+            "value": 1398.269999999999
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "rsi14": {
+          "status": "complete",
+          "warmupBars": 15,
+          "observedBars": 256,
+          "formula": "100-100/(1+avgGain/avgLoss); Wilder alpha=1/14, first 14 changes mean seed; flat 0/0 undefined",
+          "values": {
+            "value": 44.826876055202554,
+            "averageGain": 16.105470745587642,
+            "averageLoss": 19.822687009046835
+          },
+          "seededAt": "2025-12-02",
+          "reason": null
+        },
+        "atr14": {
+          "status": "complete",
+          "warmupBars": 15,
+          "observedBars": 256,
+          "formula": "TR=max(H-L,abs(H-prevC),abs(L-prevC)); first bar undefined; Wilder alpha=1/14 with 14-TR mean seed",
+          "values": {
+            "value": 60.93194671682275
+          },
+          "seededAt": "2025-12-02",
+          "reason": null
+        },
+        "macd": {
+          "status": "complete",
+          "warmupBars": 26,
+          "observedBars": 256,
+          "formula": "EMA12-EMA26; alpha=2/(period+1), arithmetic mean seeds at bars 12 and 26",
+          "values": {
+            "value": -42.470679000298105
+          },
+          "seededAt": "2025-12-17",
+          "reason": null
+        },
+        "macdSignal": {
+          "status": "complete",
+          "warmupBars": 34,
+          "observedBars": 256,
+          "formula": "EMA9 of MACD starting at bar 26; first 9 MACD mean seed; histogram=MACD-signal",
+          "values": {
+            "signal": -41.56114641642554,
+            "histogram": -0.9095325838725685
+          },
+          "seededAt": "2025-12-31",
+          "reason": null
+        },
+        "bollinger20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 256,
+          "formula": "SMA20 +/- 2 population standard deviations (ddof=0)",
+          "values": {
+            "upper": 1548.7171376672698,
+            "middle": 1410.2999999999997,
+            "lower": 1271.8828623327297
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "volume20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 256,
+          "formula": "Mean of last 20 volumes INCLUDING latest; ratio=latest/mean, zero denominator undefined",
+          "values": {
+            "mean": 719892.65,
+            "ratio": 1.0654227404599839
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "obv": {
+          "status": "complete",
+          "warmupBars": 1,
+          "observedBars": 256,
+          "formula": "Zero at first bar; add/subtract current volume on close rise/fall; tie adds zero",
+          "values": {
+            "value": 3682353
+          },
+          "seededAt": "2025-11-12",
+          "reason": null
+        }
+      },
+      "seriesSha256": "42a4bdcf157951b87b69122ce55d3b60c1edab1f928278c95d80cfe5561b0e0b",
+      "pngSha256": "44b0abe951879f2beafec6567128318eed170703af5fb413412f931b314c6980"
+    },
+    {
+      "requested": {
+        "symbol": "RHM.DE",
+        "currency": "EUR"
+      },
+      "identity": {
+        "symbol": "RHM.DE",
+        "name": "RHEINMETALL AG                I",
+        "currency": "EUR",
+        "exchange": null,
+        "isin": null,
+        "verified": false
+      },
+      "barCount": 254,
+      "firstBarDate": "2025-11-12",
+      "lastBarDate": "2026-11-12",
+      "lastClose": 772.6,
+      "quality": [
+        "Adjustment and latest-bar completion unknown; all validated bars included.",
+        "Latest bar has acquisition UTC date and may still be forming.",
+        "2 gaps exceed 4 calendar days; holidays versus missing sessions unresolved.",
+        "1 zero-volume bars; upstream missing-versus-zero semantics unavailable."
+      ],
+      "formulaVersion": "pi-market-indicators.v1",
+      "indicators": {
+        "sma20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 254,
+          "formula": "arithmetic mean of last 20 closes",
+          "values": {
+            "value": 967.1499999999999
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "sma50": {
+          "status": "complete",
+          "warmupBars": 50,
+          "observedBars": 254,
+          "formula": "arithmetic mean of last 50 closes",
+          "values": {
+            "value": 979.5759999999999
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "sma200": {
+          "status": "complete",
+          "warmupBars": 200,
+          "observedBars": 254,
+          "formula": "arithmetic mean of last 200 closes",
+          "values": {
+            "value": 1226.765
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "rsi14": {
+          "status": "complete",
+          "warmupBars": 15,
+          "observedBars": 254,
+          "formula": "100-100/(1+avgGain/avgLoss); Wilder alpha=1/14, first 14 changes mean seed; flat 0/0 undefined",
+          "values": {
+            "value": 27.32492374370908,
+            "averageGain": 7.905574358077571,
+            "averageLoss": 21.02616002561909
+          },
+          "seededAt": "2025-12-02",
+          "reason": null
+        },
+        "atr14": {
+          "status": "complete",
+          "warmupBars": 15,
+          "observedBars": 254,
+          "formula": "TR=max(H-L,abs(H-prevC),abs(L-prevC)); first bar undefined; Wilder alpha=1/14 with 14-TR mean seed",
+          "values": {
+            "value": 48.158732670607485
+          },
+          "seededAt": "2025-12-02",
+          "reason": null
+        },
+        "macd": {
+          "status": "complete",
+          "warmupBars": 26,
+          "observedBars": 254,
+          "formula": "EMA12-EMA26; alpha=2/(period+1), arithmetic mean seeds at bars 12 and 26",
+          "values": {
+            "value": -52.82340419057846
+          },
+          "seededAt": "2025-12-17",
+          "reason": null
+        },
+        "macdSignal": {
+          "status": "complete",
+          "warmupBars": 34,
+          "observedBars": 254,
+          "formula": "EMA9 of MACD starting at bar 26; first 9 MACD mean seed; histogram=MACD-signal",
+          "values": {
+            "signal": -27.918349902724717,
+            "histogram": -24.90505428785374
+          },
+          "seededAt": "2026-01-05",
+          "reason": null
+        },
+        "bollinger20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 254,
+          "formula": "SMA20 +/- 2 population standard deviations (ddof=0)",
+          "values": {
+            "upper": 1166.8913677734283,
+            "middle": 967.1499999999999,
+            "lower": 767.4086322265714
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "volume20": {
+          "status": "complete",
+          "warmupBars": 20,
+          "observedBars": 254,
+          "formula": "Mean of last 20 volumes INCLUDING latest; ratio=latest/mean, zero denominator undefined",
+          "values": {
+            "mean": 267977.55,
+            "ratio": 1.6010520284255156
+          },
+          "seededAt": null,
+          "reason": null
+        },
+        "obv": {
+          "status": "complete",
+          "warmupBars": 1,
+          "observedBars": 254,
+          "formula": "Zero at first bar; add/subtract current volume on close rise/fall; tie adds zero",
+          "values": {
+            "value": -9756896
+          },
+          "seededAt": "2025-11-12",
+          "reason": null
+        }
+      },
+      "seriesSha256": "7adc090d12c9206458e3bc8d34bddcf5b96132d5835de355b375c005ae66a8ba",
+      "pngSha256": "df14d2f283d422e3cf164fbcfa888936177079c4a9f23c86f27be3bf936017c4"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
 import type { SearchResult } from "./search.ts";
+import { resultKind } from "./results.ts";
 import { prepare, realDay, review, validatePublicReferences, type Candidate, type Response } from "./qualification.ts";
 
 export type ReduceInput = {
@@ -30,8 +31,10 @@ export function collectSources(input: ReduceInput) {
       index, status: "rejected" as const, reason: message(outcome.reason),
       ...(outcome.reason && typeof outcome.reason === "object" && !(outcome.reason instanceof Error) ? { details: outcome.reason } : {}),
     };
-    if (outcome.status !== "fulfilled" || !outcome.value || !["completed", "empty", "failed"].includes(outcome.value.status) || !Array.isArray(outcome.value.sources)) throw new Error("Expected Promise.allSettled search outcomes.");
+    if (outcome.status !== "fulfilled") throw new Error("Expected Promise.allSettled search outcomes.");
     const result = outcome.value;
+    if (resultKind(result) !== "leads") throw new Error("Qualification accepts leads only; keep evidence separate for interpretation.");
+    if (!["completed", "empty", "failed"].includes(result.status) || !Array.isArray(result.sources)) throw new Error("Expected normalized search results, not a routing tag alone.");
     if (result.status === "failed" && result.sources.length) throw new Error("Failed search cannot supply usable sources.");
     for (const source of result.sources) {
       if (!source || typeof source.id !== "string" || !source.id || ids.has(source.id)) throw new Error("Source IDs must be nonempty and unique across outcomes.");
@@ -92,7 +95,14 @@ export async function reduce(input: ReduceInput, options: ReduceOptions) {
   const profile = JSON.parse(await readFile(new URL("../profiles/qualification-v3.json", import.meta.url), "utf8"));
   const profileHash = hash(profile);
   const preservedInput = { question: input.question, since: input.since, until: input.until, outcomes: collected.outcomes };
-  const reductionId = hash({ version: 1, input: preservedInput, profileHash });
+  // The routing tag is not new evidence. Keep pre-tag cache/claim identities so
+  // upgrading the contract cannot silently repeat previously attempted paid work.
+  const identityInput = { ...preservedInput, outcomes: collected.outcomes.map(outcome => {
+    if (outcome.status === "rejected") return outcome;
+    const { kind: _routingKind, ...result } = outcome.result;
+    return { ...outcome, result };
+  }) };
+  const reductionId = hash({ version: 1, input: identityInput, profileHash });
   const root = resolve(process.env.PI_RESEARCH_REDUCTION_DIR || join(options.cwd, ".artifacts/reductions"));
   const artifactDir = join(root, reductionId), resultPath = join(artifactDir, "result.json");
   await mkdir(root, { recursive: true, mode: 0o700 });

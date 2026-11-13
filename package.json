@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=20.3.0" },
   "files": ["extensions/", "src/", "skills/", "profiles/", "docs/", "patches/", "tests/", "README.md"],
-  "description": "Bounded research with package-owned Brave, Perplexity, Grok X and AGY source providers",
+  "description": "Bounded research with search providers, Yahoo market evidence, indicators and charts",
   "keywords": [
     "pi-package"
   ],
@@ -18,10 +18,13 @@
     ]
   },
   "scripts": {
-    "test": "bun test ./tests/*.test.ts && node --test tests/native/*.test.mjs"
+    "test": "bun test ./tests/*.test.ts && node --test tests/native/*.test.mjs tests/market/*.test.mjs",
+    "test:market": "node --test tests/market/*.test.mjs",
+    "test:market-contact": "node tests/live/market-contact.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
   }
 }
